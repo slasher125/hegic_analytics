@@ -5,7 +5,7 @@
 ### Usage
 ```
 import api
-# select btw "options", "poolBalances", "bondingcurve"
+# select btw "options", "poolBalances", "bondingCurveEvents"
 df = api.get_data("options")
 
 which returns:
