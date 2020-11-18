@@ -29,6 +29,9 @@ for a in unique_amounts:
 # Initialise the app
 app = dash.Dash(__name__)
 
+# for gunicorn
+server = app.server
+
 app.layout = html.Div(
     children=[
         html.Div(
@@ -54,8 +57,28 @@ app.layout = html.Div(
                                         {"label": "WBTC", "value": "WBTC"},
                                     ],
                                     multi=False,
-                                    value=["ETH"],  # default
+                                    value="ETH", # default
                                     placeholder="Select btw ETH or WBTC",
+                                    style={"backgroundColor": "#1E1E1E"},
+                                    className="stockselector",
+                                ),
+                            ],
+                            style={"color": "#1E1E1E"},
+                        ),
+                        html.Div(html.P("Select status")),
+                        html.Div(
+                            className="div-for-dropdown",
+                            children=[
+                                dcc.Dropdown(
+                                    id="status",
+                                    options=[
+                                        {"label": "ACTIVE", "value": "ACTIVE"},
+                                        {"label": "EXPIRED", "value": "EXPIRED"},
+                                        {"label": "EXERCISED", "value": "EXERCISED"},
+                                    ],
+                                    value=["ACTIVE"],  # default
+                                    multi=True,
+                                    placeholder="Select status",
                                     style={"backgroundColor": "#1E1E1E"},
                                     className="stockselector",
                                 ),
@@ -78,26 +101,6 @@ app.layout = html.Div(
                                     value=["1", "7", "14", "21", "28"],  # default
                                     multi=True,
                                     placeholder="Select periods",
-                                    style={"backgroundColor": "#1E1E1E"},
-                                    className="stockselector",
-                                ),
-                            ],
-                            style={"color": "#1E1E1E"},
-                        ),
-                        html.Div(html.P("Select status")),
-                        html.Div(
-                            className="div-for-dropdown",
-                            children=[
-                                dcc.Dropdown(
-                                    id="status",
-                                    options=[
-                                        {"label": "ACTIVE", "value": "ACTIVE"},
-                                        {"label": "EXPIRED", "value": "EXPIRED"},
-                                        {"label": "EXERCISED", "value": "EXERCISED"},
-                                    ],
-                                    value=["ACTIVE"],  # default
-                                    multi=False,
-                                    placeholder="Select status",
                                     style={"backgroundColor": "#1E1E1E"},
                                     className="stockselector",
                                 ),
@@ -201,7 +204,7 @@ def chart2d(
     X = df.copy()
     X = X[X["symbol"] == symbol]
     X = X[X["period_days"].isin(period)]
-    X = X[X["status"] == status]
+    X = X[X["status"].isin(status)]
     X = X[X["month"].isin(months)]
     X = X[X["day"].isin(days)]
     X = X[X["amount"].astype(str).isin(amounts)]
@@ -245,7 +248,7 @@ def chart3d(
     X = df.copy()
     X = X[X["symbol"] == symbol]
     X = X[X["period_days"].isin(period)]
-    X = X[X["status"] == status]
+    X = X[X["status"].isin(status)]
     X = X[X["month"].isin(months)]
     X = X[X["day"].isin(days)]
     X = X[X["amount"].astype(str).isin(amounts)]

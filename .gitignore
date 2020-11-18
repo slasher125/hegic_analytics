@@ -5,3 +5,6 @@ greeks.py
 Untitled.ipynb
 app_test.py
 .DS_Store
+venv
+*.pyc
+.env

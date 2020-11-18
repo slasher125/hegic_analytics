@@ -2,7 +2,7 @@
 
 ### Install with `pip install .`
 
-### Usage
+### API Usage
 ```
 import api
 # select btw "options", "poolBalances", "bondingCurveEvents"
@@ -19,3 +19,7 @@ Out[2]:
 3  0x049261c9110499b6135b0cba5dc391104b8109ac    40.0                 NaT  ...  3.199000   PUT          28
 4  0x049261c9110499b6135b0cba5dc391104b8109ac    40.0 2020-11-06 10:52:53  ...  3.199000  CALL          28
 ```
+
+### APP Usage
+after installing the project run `python app.py` and go to
+http://localhost:8050/
