@@ -8,5 +8,6 @@ setuptools.setup(
         "pandas==1.1.4",
         "requests==2.25.0",
         "jupyter==1.0.0",
+        "dash==1.17.0",
     ],
 )
