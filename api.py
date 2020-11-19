@@ -71,6 +71,7 @@ def get_data(content: str) -> pd.DataFrame:
             "strike",
             "totalFee",
             "profit",
+            "impliedVolatility",
         ]
         df[cols] = df[cols].astype("float64")
 
@@ -108,7 +109,7 @@ def get_data(content: str) -> pd.DataFrame:
 
 queries = {
     "options": """{
-        options(first: 100, skip: page_size, orderBy: timestamp, orderDirection: desc) {
+        options(first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
         account
         symbol
@@ -126,10 +127,11 @@ queries = {
         exercise_timestamp
         exercise_tx
         profit
+        impliedVolatility
         }
         }""",
     "poolBalances": """{ 
-        poolBalances(first: 100, skip: page_size, orderBy: timestamp, orderDirection: desc) {
+        poolBalances(first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
         timestamp
         account
@@ -143,7 +145,7 @@ queries = {
         }
         }""",
     "bondingCurveEvents": """{ 
-        bondingCurveEvents(first: 100, skip: page_size, orderBy: timestamp, orderDirection: desc) {
+        bondingCurveEvents(first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
         timestamp
         account
