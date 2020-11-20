@@ -1,29 +1,144 @@
+import datetime
+import time
+from typing import List
+from concurrent.futures import ThreadPoolExecutor
+
 import dash
 import dash_html_components as html
-import plotly.express as px
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
+import plotly.express as px
+import pandas as pd
+import numpy as np
 
 import api
 
 
-df = api.get_data("options")
-df["day"] = df["expiration"].dt.strftime("%Y-%m-%d")
-df["month"] = df["expiration"].dt.month_name()
+deciles = {round(i, 1): str(round(i, 1)) for i in np.arange(0.0, 1.1, 0.1)}
 
-options_months = []
-for m in df["month"].unique():
-    options_months.append({"label": m, "value": m})
 
-options_days = []
-for d in df["day"].unique():
-    options_days.append({"label": d, "value": d})
+def get_new_data():
+    """Updates the global variable 'df' with new data"""
+    global df
+    df = api.get_data("options")
 
-unique_amounts = list(df["amount"].sort_values(ascending=False).unique())
-unique_amounts = [str(i) for i in unique_amounts]
-options_amounts = []
-for a in unique_amounts:
-    options_amounts.append({"label": str(a), "value": str(a)})
+
+def get_new_data_every(period=3600):
+    """Update the data every 3600 seconds"""
+    while True:
+        get_new_data()
+        print(df["timestamp"].max())
+        print("data updated")
+        time.sleep(period)
+
+
+def make_layout():
+    return html.Div(
+        children=[
+            html.Div(
+                className="row",
+                children=[
+                    html.Div(
+                        className="four columns div-user-controls",
+                        children=[
+                            html.Div(id="invisible-div-callback-trigger"),
+                            html.H1("HEGIC OPTIONS ANALYTICS TOOL"),
+                            html.P(
+                                "Inspect individual ETH/WBTC options per strike price, expiration-date and option amount (displayed by the bubble size)."
+                            ),
+                            html.P("Choose from the dropdown menus below."),
+                            html.Div(html.H2("STATUS")),
+                            html.Div(
+                                className="div-for-dropdown",
+                                children=[
+                                    dcc.Dropdown(
+                                        id="status",
+                                        options=[
+                                            {"label": "ACTIVE", "value": "ACTIVE"},
+                                            {"label": "EXPIRED", "value": "EXPIRED"},
+                                            {
+                                                "label": "EXERCISED",
+                                                "value": "EXERCISED",
+                                            },
+                                        ],
+                                        value=["ACTIVE"],  # default
+                                        multi=True,
+                                        placeholder="Select status",
+                                        className="dropdown_selector",
+                                    ),
+                                ],
+                            ),
+                            html.Div(html.H2("PERIOD(S) IN DAYS")),
+                            html.Div(
+                                className="div-for-dropdown",
+                                children=[
+                                    dcc.Dropdown(
+                                        id="period",
+                                        options=[
+                                            {"label": "1", "value": "1"},
+                                            {"label": "7", "value": "7"},
+                                            {"label": "14", "value": "14"},
+                                            {"label": "21", "value": "21"},
+                                            {"label": "28", "value": "28"},
+                                        ],
+                                        value=["1", "7", "14", "21", "28"],  # default
+                                        multi=True,
+                                        placeholder="Select periods",
+                                        className="dropdown_selector",
+                                    ),
+                                ],
+                            ),
+                            html.Div(html.H2("AMOUNT DECILE SLIDER - ETH")),
+                            html.Div(
+                                className="div-for-slider",
+                                children=[
+                                    dcc.RangeSlider(
+                                        id="amounts_eth",
+                                        min=0.0,
+                                        max=1.0,
+                                        step=None,
+                                        marks=deciles,
+                                        value=[0.0, 1.0],
+                                        allowCross=False,
+                                        className="dropdown_selector",
+                                    ),
+                                ],
+                            ),
+                            html.Div(html.H2("AMOUNT DECILE SLIDER - WBTC")),
+                            html.Div(
+                                className="div-for-slider",
+                                children=[
+                                    dcc.RangeSlider(
+                                        id="amounts_wbtc",
+                                        min=0.0,
+                                        max=1.0,
+                                        step=None,
+                                        marks=deciles,
+                                        value=[0.0, 1.0],
+                                        allowCross=False,
+                                        className="dropdown_selector",
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        className="eight columns div-for-charts bg-grey",
+                        children=[
+                            dcc.Graph(
+                                id="chart_2d_eth",
+                                config={"displayModeBar": False},
+                            ),
+                            dcc.Graph(
+                                id="chart_2d_wbtc",
+                                config={"displayModeBar": False},
+                            ),
+                        ],
+                    ),
+                ],
+            )
+        ]
+    )
 
 
 # Initialise the app
@@ -32,242 +147,143 @@ app = dash.Dash(__name__)
 # for gunicorn
 server = app.server
 
-app.layout = html.Div(
-    children=[
-        html.Div(
-            className="row",
-            children=[
-                html.Div(
-                    className="four columns div-user-controls",
-                    children=[
-                        html.H1("Hegic Options Analytics Tool"),
-                        html.P(
-                            "Visualising ETH or WBTC options per strike price, expiration date and options amount."
-                        ),
-                        html.P("The bubble size corresponds to the options amount."),
-                        html.P("Pick what you need from the dropdowns below."),
-                        html.Div(html.P("Select the symbol")),
-                        html.Div(
-                            className="div-for-dropdown",
-                            children=[
-                                dcc.Dropdown(
-                                    id="symbol",
-                                    options=[
-                                        {"label": "ETH", "value": "ETH"},
-                                        {"label": "WBTC", "value": "WBTC"},
-                                    ],
-                                    multi=False,
-                                    value="ETH", # default
-                                    placeholder="Select btw ETH or WBTC",
-                                    style={"backgroundColor": "#1E1E1E"},
-                                    className="stockselector",
-                                ),
-                            ],
-                            style={"color": "#1E1E1E"},
-                        ),
-                        html.Div(html.P("Select status")),
-                        html.Div(
-                            className="div-for-dropdown",
-                            children=[
-                                dcc.Dropdown(
-                                    id="status",
-                                    options=[
-                                        {"label": "ACTIVE", "value": "ACTIVE"},
-                                        {"label": "EXPIRED", "value": "EXPIRED"},
-                                        {"label": "EXERCISED", "value": "EXERCISED"},
-                                    ],
-                                    value=["ACTIVE"],  # default
-                                    multi=True,
-                                    placeholder="Select status",
-                                    style={"backgroundColor": "#1E1E1E"},
-                                    className="stockselector",
-                                ),
-                            ],
-                            style={"color": "#1E1E1E"},
-                        ),
-                        html.Div(html.P("Select the period(s)")),
-                        html.Div(
-                            className="div-for-dropdown",
-                            children=[
-                                dcc.Dropdown(
-                                    id="period",
-                                    options=[
-                                        {"label": "1", "value": "1"},
-                                        {"label": "7", "value": "7"},
-                                        {"label": "14", "value": "14"},
-                                        {"label": "21", "value": "21"},
-                                        {"label": "28", "value": "28"},
-                                    ],
-                                    value=["1", "7", "14", "21", "28"],  # default
-                                    multi=True,
-                                    placeholder="Select periods",
-                                    style={"backgroundColor": "#1E1E1E"},
-                                    className="stockselector",
-                                ),
-                            ],
-                            style={"color": "#1E1E1E"},
-                        ),
-                        html.Div(html.P("Select amounts")),
-                        html.Div(
-                            className="div-for-dropdown",
-                            children=[
-                                dcc.Dropdown(
-                                    id="amounts",
-                                    options=options_amounts,
-                                    value=unique_amounts,  # default
-                                    multi=True,
-                                    placeholder="Select amounts",
-                                    style={"backgroundColor": "#1E1E1E"},
-                                    className="stockselector",
-                                ),
-                            ],
-                            style={"color": "#1E1E1E"},
-                        ),
-                        html.Div(html.P("Select month(s)")),
-                        html.Div(
-                            className="div-for-dropdown",
-                            children=[
-                                dcc.Dropdown(
-                                    id="months",
-                                    options=options_months,
-                                    value=df["month"].unique(),  # default
-                                    multi=True,
-                                    placeholder="Select months",
-                                    style={"backgroundColor": "#1E1E1E"},
-                                    className="stockselector",
-                                ),
-                            ],
-                            style={"color": "#1E1E1E"},
-                        ),
-                        html.Div(html.P("Select days(s)")),
-                        html.Div(
-                            className="div-for-dropdown",
-                            children=[
-                                dcc.Dropdown(
-                                    id="days",
-                                    options=options_days,
-                                    value=sorted(df["day"].unique()),  # default
-                                    multi=True,
-                                    placeholder="Select days",
-                                    style={"backgroundColor": "#1E1E1E"},
-                                    className="stockselector",
-                                ),
-                            ],
-                            style={"color": "#1E1E1E"},
-                        ),
-                    ],
-                ),
-                html.Div(
-                    className="eight columns div-for-charts bg-grey",
-                    children=[
-                        dcc.Graph(
-                            id="chart_2d",
-                            config={"displayModeBar": False},
-                        ),
-                        dcc.Graph(
-                            id="chart_3d",
-                            config={"displayModeBar": False},
-                        ),
-                    ],
-                ),
-            ],
-        )
-    ]
-)
+# get initial data
+get_new_data()
 
-
-title = (
-    "Nb of options (bubble size) compared to strike, expiration date and option type"
-)
+# # we need to set layout to be a function so that for each new page load
+# # the layout is re-created with the current data, otherwise they will see
+# # data that was generated when the Dash app was first initialised
+app.layout = make_layout
 
 
 @app.callback(
-    Output("chart_2d", "figure"),
+    Output("chart_2d_eth", "figure"),
     [
-        Input("symbol", "value"),
         Input("period", "value"),
         Input("status", "value"),
-        Input("amounts", "value"),
-        Input("months", "value"),
-        Input("days", "value"),
+        Input("amounts_eth", "value"),
+        Input("invisible-div-callback-trigger", "children"),
     ],
 )
 def chart2d(
-    symbol: str,
     period: str,
     status: str,
-    amounts: str,
-    months: str,
-    days: str,
+    amounts_eth: List[float],
+    _,
 ):
 
+    global df
     X = df.copy()
+    symbol = "ETH"
+
+    X = X.sort_values("type")
     X = X[X["symbol"] == symbol]
     X = X[X["period_days"].isin(period)]
     X = X[X["status"].isin(status)]
-    X = X[X["month"].isin(months)]
-    X = X[X["day"].isin(days)]
-    X = X[X["amount"].astype(str).isin(amounts)]
+    lb, ub = X["amount"].quantile(amounts_eth[0]), X["amount"].quantile(amounts_eth[1])
+    X = X[X["amount"].between(lb, ub)]
 
-    fig = px.scatter(
-        X,
-        x="expiration",
-        y="strike",
-        size="amount",
-        size_max=70,
-        color="type",
-        title=title,
-        template="plotly_dark",
-    ).update_layout(
-        {"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)"}
-    )
+    # in case of no realised profit, set to nan
+    X["profit"] = X["profit"].fillna("NaN")
+
+    bubble_size = int(70 * amounts_eth[1])
+    fig = plot(X=X, title=symbol, bubble_size=bubble_size)
 
     return fig
 
 
 @app.callback(
-    Output("chart_3d", "figure"),
+    Output("chart_2d_wbtc", "figure"),
     [
-        Input("symbol", "value"),
         Input("period", "value"),
         Input("status", "value"),
-        Input("amounts", "value"),
-        Input("months", "value"),
-        Input("days", "value"),
+        Input("amounts_wbtc", "value"),
+        Input("invisible-div-callback-trigger", "children"),
     ],
 )
-def chart3d(
-    symbol: str,
+def chart2d(
     period: str,
     status: str,
-    amounts: str,
-    months: str,
-    days: str,
+    amounts_wbtc: List[float],
+    _,
 ):
 
+    global df
     X = df.copy()
+    symbol = "WBTC"
+
+    X = X.sort_values("type")
     X = X[X["symbol"] == symbol]
     X = X[X["period_days"].isin(period)]
     X = X[X["status"].isin(status)]
-    X = X[X["month"].isin(months)]
-    X = X[X["day"].isin(days)]
-    X = X[X["amount"].astype(str).isin(amounts)]
+    lb, ub = X["amount"].quantile(amounts_wbtc[0]), X["amount"].quantile(
+        amounts_wbtc[1]
+    )
+    X = X[X["amount"].between(lb, ub)]
 
-    fig = px.scatter_3d(
+    # in case of no realised profit, set to nan
+    X["profit"] = X["profit"].fillna("NaN")
+
+    bubble_size = int(70 * amounts_wbtc[1])
+    fig = plot(X=X, title=symbol, bubble_size=bubble_size)
+
+    return fig
+
+
+def plot(X: pd.DataFrame, title: str, bubble_size: int):
+
+    # rename columms for plotting
+    col_mapping = {
+        "account": "Account",
+        "amount": "Option Size",
+        "exercise_timestamp": "Exercise Timestamp",
+        "exercise_tx": "Exercise tx",
+        "expiration": "Expires At",
+        "period_days": "Period of Holding",
+        "settlementFee": "Settlement Fee",
+        "status": "Status",
+        "strike": "Strike Price",
+        "symbol": "Symbol",
+        "timestamp": "Placed At",
+        "totalFee": "Total Fee",
+        "type": "Option Type",
+        "premium": "Premium",
+        "profit": "Profit",
+    }
+    X = X.rename(columns=col_mapping)
+
+    fig = px.scatter(
         X,
-        x="expiration",
-        y="strike",
-        z="amount",
-        size="amount",
-        size_max=70,
-        color="type",
-        title=title,
+        x="Expires At",
+        y="Strike Price",
+        size="Option Size",
+        size_max=bubble_size,
+        color="Option Type",
+        title=f"{title} - Max Option-Size Value: {X['Option Size'].max()}",
+        hover_name="Account",
+        hover_data={
+            "Placed At": "|%b %d, %Y, %H:%M",
+            "Period of Holding": True,
+            "Premium": True,
+            "Settlement Fee": True,
+            "Total Fee": True,
+            "Profit": True,
+        },
+        color_discrete_sequence=["#45fff4", "#f76eb2"],  # hegic colors
         template="plotly_dark",
     ).update_layout(
-        {"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)"}
+        {"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)"},
+        font_family="Exo 2",
+        title_font_family="Exo 2",
+        title_font_color="#defefe",
+        font={"size": 15},
     )
 
     return fig
+
+
+executor = ThreadPoolExecutor(max_workers=1)
+executor.submit(get_new_data_every)
 
 
 # Run the app

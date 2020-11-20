@@ -8,3 +8,4 @@ app_test.py
 venv
 *.pyc
 .env
+test.scss

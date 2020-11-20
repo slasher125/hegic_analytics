@@ -148,7 +148,7 @@ body {
  /* currently ems cause chrome bug misinterpreting rems on body element */
   line-height: 1.6;
   font-weight: 400;
-  color: rgb(50, 50, 50);
+  color: #45fff4;
 }
 
 /* Typography –––––––––––––––––––––––––––––––––––––––––––––––––– */
@@ -203,7 +203,7 @@ p {
 }
 /* Blockquotes –––––––––––––––––––––––––––––––––––––––––––––––––– */
 blockquote {
-  border-left: 4px lightgrey solid;
+  border-left: 4px #45fff4 solid;
   padding-left: 1rem;
   margin-top: 2rem;
   margin-bottom: 2rem;
@@ -211,33 +211,34 @@ blockquote {
 }
 /* Links –––––––––––––––––––––––––––––––––––––––––––––––––– */
 a {
-  color: #1EAEDB;
+  color: #45fff4;
   text-decoration: underline;
   cursor: pointer;
 }
 a:hover {
-  color: #0FA0CE;
+  color: #45fff4;
 }
 /* Buttons –––––––––––––––––––––––––––––––––––––––––––––––––– */
 .rc-slider-track{
-  background-color: #007eff
+  /* background-color: #007eff */
+  background-color: #45fff4 /* slider color */
 }
 
 .rc-slider-rail{
-  background-color: #505050
+  background-color: #505050 /* leave as is!, this is the bground color for the sliders*/
 }
 
 
 .main-svg{
-  font-family: "Open Sans Semi Bold"
+  font-family: "Exo 2"
 }
 
 .gtitle{
-  font-family: "Open Sans Semi Bold" !important
+  font-family: "Exo 2" !important
 }
 
 .g-title{
-  font-family: "Open Sans Semi Bold"
+  font-family: "Exo 2"
 }
 
 
@@ -245,7 +246,7 @@ a:hover {
   display: inline-block;
   height: 38px;
   padding: 0 30px;
-  color: #555;
+  color: #45fff4;
   text-align: center;
   font-size: 11px;
   font-weight: 600;
@@ -256,24 +257,26 @@ a:hover {
   white-space: nowrap;
   background-color: transparent;
   border-radius: 4px;
-  border: 1px solid #bbb;
+  border: 1px solid #45fff4;
   cursor: pointer;
   box-sizing: border-box;
 }
 .button:hover, button:hover, input[type="submit"]:hover, input[type="reset"]:hover, input[type="button"]:hover, .button:focus, button:focus, input[type="submit"]:focus, input[type="reset"]:focus, input[type="button"]:focus {
-  color: #333;
-  border-color: #888;
+  color:  #45fff4;
+  border-color: #45fff4;
   outline: 0;
 }
 .button.button-primary, button.button-primary, input[type="submit"].button-primary, input[type="reset"].button-primary, input[type="button"].button-primary {
-  color: #FFF;
-  background-color: #33C3F0;
-  border-color: #33C3F0;
+  color: #45fff4;
+  /* background-color: #33C3F0; */
+  /* border-color: #33C3F0; */
+  background-color: #45fff4;
+  border-color: #45fff4;
 }
 .button.button-primary:hover, button.button-primary:hover, input[type="submit"].button-primary:hover, input[type="reset"].button-primary:hover, input[type="button"].button-primary:hover, .button.button-primary:focus, button.button-primary:focus, input[type="submit"].button-primary:focus, input[type="reset"].button-primary:focus, input[type="button"].button-primary:focus {
-  color: #FFF;
-  background-color: #1EAEDB;
-  border-color: #1EAEDB;
+  color: #45fff4;
+  background-color: #45fff4;
+  border-color: #45fff4;
 }
 /* Forms –––––––––––––––––––––––––––––––––––––––––––––––––– */
 input[type="email"], input[type="number"], input[type="search"], input[type="text"], input[type="tel"], input[type="url"], input[type="password"], textarea, select {
@@ -281,7 +284,7 @@ input[type="email"], input[type="number"], input[type="search"], input[type="tex
   padding: 6px 10px;
  /* The 6px vertically centers text on FF, ignored by Webkit */
   background-color: #fff;
-  border: 1px solid #D1D1D1;
+  border: 1px solid #45fff4;
   border-radius: 4px;
   box-shadow: none;
   box-sizing: border-box;
@@ -301,7 +304,7 @@ textarea {
   padding-bottom: 6px;
 }
 input[type="email"]:focus, input[type="number"]:focus, input[type="search"]:focus, input[type="text"]:focus, input[type="tel"]:focus, input[type="url"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
-  border: 1px solid #33C3F0;
+  border: 1px solid #45fff4;
   outline: 0;
 }
 label, legend {
@@ -345,7 +348,7 @@ table {
 th, td {
   padding: 12px 15px;
   text-align: left;
-  border-bottom: 1px solid #E1E1E1;
+  border-bottom: 1px solid #defefe;
 }
 th:first-child, td:first-child {
   padding-left: 0;
@@ -386,7 +389,7 @@ hr {
   margin-top: 3rem;
   margin-bottom: 3.5rem;
   border-width: 0;
-  border-top: 1px solid #E1E1E1;
+  border-top: 1px solid #defefe;
 }
 /* Clearing –––––––––––––––––––––––––––––––––––––––––––––––––– */
 /* Self Clearing Goodness */
@@ -419,8 +422,8 @@ html, body{
 }
 
 body {
-  background-color: #1E1E1E;
-  color: #d8d8d8;
+  background-color:  #121c36; /* bground color left*/
+  color: #defefe; /* text color on the left */
   height: 100%;
   margin: 0;
   padding: 0;
@@ -430,23 +433,34 @@ body {
   height: 100%;
 }
 
-h1, h2, h3, h4, h5 {
-  font-family: "Open Sans Semi Bold";
+h1 {
+    font-family: "Exo 2";
+    letter-spacing: 2.1px;
+    font-size: 21px;
+    padding-left: 2px;
+    color: #45fff4;
+    font-weight: bold;
+  }
+
+h2, h3, h4, h5 {
+  font-family: "Exo 2";
   letter-spacing: 2.1px;
-  font-size: 21px;
-  padding-left: 12px;
+  font-size: 13px;
+  padding-left: 2px;
+  color: #45fff4;
 }
 p {
-  font-family: "Open Sans Light";
+  font-family: "Exo 2";
   font-weight: 400;
-  font-size: 14px;
-  padding-left: 12px;
+  font-size: 16px;
+  padding-left: 2px;
+  color: #defefe;
 }
 a {
   text-decoration: none;
 }
 .bg-grey{
-  background-color: #31302F;
+  background-color:#19274d; /* color on the right side*/
 }
 .text-padding{
   padding: 5px;
@@ -455,7 +469,7 @@ a {
 .div-for-charts{
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 120vh;
   width: 100%;
 }
 #histogram {
@@ -475,18 +489,20 @@ a {
 .div-for-dropdown {
   padding-top: 12px;
   padding-bottom: 12px;
+  margin-top: -1.5em;
 }
 .div-for-slider {
-  width: 97%;
+  width: 100%;
   text-align: center;
+  margin-top: -0.8em;
 }
 .logo {
   height: 50px;
   padding-bottom: 12px;
 }
 .Select-control, .Select-menu-outer, .Select-multi-value-wrapper, .select-up, .is-open .Select-control {
-  background-color: #1E1E1E;
-  color: white;
+  background-color:  #121c36; /* colors settings when selecting from the dropdowns*/
+  color:  #45fff4;
 
 }
 
@@ -494,17 +510,17 @@ a {
   max-height: 82px;
   overflow-y: auto;
   margin: 0px 0px -3px 0px;
-  border: 0.5px solid #dbdbdb44;
+  border: 0.5px solid #45fff4;
 }
 
 .Select-control{
-  border: 0.5px solid #dbdbdb44;
+  border: 0.5px solid #45fff4; /* the dropdown box border color*/
 }
 
 .has-value.Select--single>.Select-control .Select-value .Select-value-label, .has-value.is-pseudo-focused.Select--single>.Select-control .Select-value .Select-value-label {
-  color: white;
-  background: #1E1E1E;
-  background-color: #1E1E1E;
+  color: #45fff4;
+  background: #45fff4;
+  background-color: #45fff4;
 }
 ._dash-app-content {
   overflow-x: hidden;
@@ -512,21 +528,21 @@ a {
   position: relative;
 }
 .has-value.Select--single>.Select-control .Select-value .Select-value-label, .has-value.is-pseudo-focused.Select--single>.Select-control .Select-value .Select-value-labeln {
-  color: #d8d8d8;
+  color: #45fff4;
   font-weight: 400;
   font-size: 14px;
 }
 
 .Input.DateInput_1 {
-  background-color: #1e1e1e;
+  background-color: #45fff4;
 }
 
 #date {
-  background-color: #1e1e1e;
-  font-family: "Open Sans Light";
+  background-color: #45fff4;
+  font-family: "Exo 2";
   font-weight: 400;
-  color: #dbdbdb;
-  border: 0.5px solid #dbdbdb44;
+  color: #45fff4;
+  border: 0.5px solid  #45fff4;
 }
 
 #date-picker{
@@ -546,23 +562,23 @@ a {
 }
 
 .DateInput.DateInput_1 {
-  background-color: #1e1e1e;
+  background-color: #45fff4;
 }
 
 .SingleDatePickerInput__withBorder {
   border-radius: 3px;
-  color: #dbdbdb;
-  background: #1e1e1e;
-  background-color: #1e1e1e;
+  color: #45fff4;
+  background: #45fff4;
+  background-color: #45fff4;
 }
 
 .SingleDatePickerInput.SingleDatePickerInput_1.SingleDatePickerInput__withBorder.SingleDatePickerInput__withBorder_2 {
-  border: 0.0px solid #dbdbdb;
+  border: 0.0px solid #45fff4;
   display: block;
 }
 
 .SingleDatePicker_1 {
-  border: 0.0px solid #dbdbdb;
+  border: 0.0px solid #45fff4;
   display: block;
 }
 
@@ -591,7 +607,7 @@ a {
  }
 
  .div-user-controls {
-    padding: 32px;
+    padding: 50px;
  }
 
  .side-by-side{
@@ -618,7 +634,7 @@ a {
 
 /* Track */
 ::-webkit-scrollbar-track {
-  background: #1e1e1e !important;
+  background: #45fff4 !important;
   border-radius: 10px !important;
   display: block !important;
 }
@@ -630,5 +646,16 @@ a {
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #d8d8d870 !important;
+  background: #45fff4 !important;
 }
+
+/* to adjust the colors of the drop down memus*/
+.dropdown_selector .Select-value {
+background-color:#19274d;
+color: #defefe;
+}
+
+.dropdown_selector .VirtualizedSelectOption {
+color: #defefe;
+}
+
