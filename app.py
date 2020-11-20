@@ -68,7 +68,7 @@ def make_layout():
                                     ),
                                 ],
                             ),
-                            html.Div(html.H2("PERIOD(S) IN DAYS")),
+                            html.Div(html.H2("PERIOD OF HOLDING")),
                             html.Div(
                                 className="div-for-dropdown",
                                 children=[
@@ -88,7 +88,7 @@ def make_layout():
                                     ),
                                 ],
                             ),
-                            html.Div(html.H2("AMOUNT DECILE SLIDER - ETH")),
+                            html.Div(html.H2("OPTION-SIZE SLIDER - ETH")),
                             html.Div(
                                 className="div-for-slider",
                                 children=[
@@ -104,7 +104,7 @@ def make_layout():
                                     ),
                                 ],
                             ),
-                            html.Div(html.H2("AMOUNT DECILE SLIDER - WBTC")),
+                            html.Div(html.H2("OPTION-SIZE DECILE SLIDER - WBTC")),
                             html.Div(
                                 className="div-for-slider",
                                 children=[
