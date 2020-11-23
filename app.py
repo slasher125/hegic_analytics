@@ -188,9 +188,7 @@ def slice_for_plotting(
 
     # scale the decile amounts to proper deciles e.g. from 5 -> 0.5
     # so that it can be used with the quantile func
-    print(amounts)
     amounts = [i / 10 for i in amounts]
-    print(amounts)
 
     X = X.sort_values("type")
     X = X[X["symbol"] == symbol]
