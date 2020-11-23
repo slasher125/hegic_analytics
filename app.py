@@ -221,15 +221,17 @@ def chart2d_bubble(
     Output("chart2d_pnl", "figure"),
     [
         Input("symbol", "value"),
+        Input("period", "value"),
+        Input("amounts", "value"),
         Input("invisible-div-callback-trigger", "children"),
     ],
 )
-def chart2d_pnl(symbol: str, _):
+def chart2d_pnl(symbol: str, period: str, amounts: typing.List[int], _):
 
     global df
     X = df.copy()
 
-    agg = prepare_data.prepare_pnl(X, symbol)
+    agg = prepare_data.prepare_pnl(X, symbol, period, amounts)
 
     fig = plots.plot_pnl(agg=agg, symbol=symbol)
 

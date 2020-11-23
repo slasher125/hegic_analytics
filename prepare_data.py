@@ -12,8 +12,8 @@ cg = CoinGeckoAPI()
 def prepare_bubble(
     X: pd.DataFrame,
     symbol: str,
-    period: str,
-    status: str,
+    period: typing.List[str],
+    status: typing.List[str],
     amounts: typing.List[float],
 ) -> typing.Tuple[pd.DataFrame, int, float]:
     """
@@ -35,6 +35,14 @@ def prepare_bubble(
     X = X[X["symbol"] == symbol]
     X = X[X["period_days"].isin(period)]
     X = X[X["status"].isin(status)]
+
+    # the status from the subgraph data will only change if
+    # unlock and unlockAll API is called. this is currently done manually!
+    # in order to get around this I keep only samples whoes
+    # expiration date is in the future
+    if "ACTIVE" in status:
+        X = X[X["expiration"] > pd.Timestamp.utcnow().tz_localize(None)]
+
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
     X = X[X["amount"].between(lb, ub)]
 
@@ -80,13 +88,25 @@ def prepare_bubble(
     return X, bubble_size, current_price
 
 
-def prepare_pnl(X: pd.DataFrame, symbol: str) -> pd.DataFrame:
+def prepare_pnl(
+    X: pd.DataFrame, symbol: str, period: str, amounts: typing.List[int]
+) -> pd.DataFrame:
     """
     main function to prepare data for P%L chart
     """
 
+    # scale the decile amounts to proper deciles e.g. from 5 -> 0.5
+    # so that it can be used with the quantile func
+    amounts = [i / 10 for i in amounts]
+
+    X = X[X["symbol"] == symbol]
+    X = X[X["period_days"].isin(period)]
+
+    lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
+    X = X[X["amount"].between(lb, ub)]
+
     # NOTE(!) currently do this only for active
-    X = X[(X["status"] == "ACTIVE") & (X["symbol"] == symbol)]
+    X = X[X["status"] == "ACTIVE"]
 
     if symbol == "WBTC":
         symbol_cg = "bitcoin"
@@ -194,5 +214,11 @@ def prepare_pnl(X: pd.DataFrame, symbol: str) -> pd.DataFrame:
 
     for col in ["profit", "profit_usd"]:
         agg[col] = np.where(agg["pos"] == "ITM", -agg[col], agg[col])
+
+    # get total for plots
+    z = agg.groupby("type")[["profit", "profit_usd"]].sum().reset_index()
+    z["pos"] = ["TOTAL", "TOTAL"]
+    z[agg.columns.tolist()]
+    agg = pd.concat([agg, z])
 
     return agg
