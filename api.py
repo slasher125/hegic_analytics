@@ -60,7 +60,12 @@ def get_data(content: str) -> pd.DataFrame:
 
     print(f"pulling '{content}'-data")
     data = loop_over_pages(content)
-    df = pd.concat(data)
+    df = pd.concat(data).reset_index(drop=True)
+
+    # keep the unix timestamp
+    df["timestamp_unix"] = df["timestamp"]
+
+    df["block"] = df["block"].astype(int)
 
     if content == "options":
         cols = [
@@ -128,6 +133,7 @@ queries = {
         exercise_tx
         profit
         impliedVolatility
+        block
         }
         }""",
     "poolBalances": """{ 

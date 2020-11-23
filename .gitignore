@@ -9,3 +9,4 @@ venv
 *.pyc
 .env
 test.scss
+pnl.ipynb

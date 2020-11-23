@@ -436,7 +436,7 @@ body {
 h1 {
     font-family: "Exo 2";
     letter-spacing: 2.1px;
-    font-size: 21px;
+    font-size: 18px;
     padding-left: 2px;
     color: #45fff4;
     font-weight: bold;
@@ -469,7 +469,7 @@ a {
 .div-for-charts{
   display: flex;
   flex-direction: column;
-  height: 120vh;
+  height: 150vh;
   width: 100%;
 }
 #histogram {
@@ -496,6 +496,11 @@ a {
   text-align: center;
   margin-top: -0.8em;
 }
+.div-for-radio {
+    width: 100%;
+    text-align: left;
+    margin-top: -0.8em;
+  }
 .logo {
   height: 50px;
   padding-bottom: 12px;
@@ -659,3 +664,6 @@ color: #defefe;
 color: #defefe;
 }
 
+.div-for-markdown{
+    font-size: 5px;
+}
