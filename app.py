@@ -7,6 +7,7 @@ import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
 import numpy as np
+import pandas as pd
 from pycoingecko import CoinGeckoAPI
 
 import api
@@ -23,6 +24,19 @@ def get_new_data():
     """Updates the global variable 'df' with new data"""
     global df
     df = api.get_data("options")
+
+    # the status from the subgraph data will only change if
+    # unlock and unlockAll API is called. this is currently done manually!
+    # to address this I check for it and set samples with active status
+    # but expiration in the past (smaller than timestamp utc now) to EXPIRED
+    df = df.assign(
+        status=np.where(
+            (df["status"] == "ACTIVE")
+            & (df["expiration"] < pd.Timestamp.utcnow().tz_localize(None)),
+            "EXPIRED",
+            df["status"],
+        )
+    )
 
 
 def get_new_data_every(period=300):

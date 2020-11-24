@@ -77,6 +77,7 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
         },
         template="plotly_dark",
         color_discrete_sequence=["#45fff4", "#f76eb2"],
+        width=700,
     )
 
     fig.update_layout(
