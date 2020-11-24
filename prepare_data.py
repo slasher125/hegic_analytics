@@ -15,7 +15,7 @@ def prepare_bubble(
     period: typing.List[str],
     status: typing.List[str],
     amounts: typing.List[float],
-) -> typing.Tuple[pd.DataFrame, int, float]:
+) -> typing.Tuple[pd.DataFrame, int, float, int]:
     """
     main function to prepare data for bubble chart
     """
@@ -33,6 +33,8 @@ def prepare_bubble(
 
     X = X.sort_values("type")
     X = X[X["symbol"] == symbol]
+    # price will stay the same for the below sections! (but must be after the symbol selector)
+    current_iv = int(X.loc[X["timestamp_unix"].idxmax()]["impliedVolatility"])
     X = X[X["period_days"].isin(period)]
     X = X[X["status"].isin(status)]
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
@@ -75,7 +77,7 @@ def prepare_bubble(
 
     bubble_size = f(amounts[1])
 
-    return X, bubble_size, current_price
+    return X, bubble_size, current_price, current_iv
 
 
 def prepare_pnl(

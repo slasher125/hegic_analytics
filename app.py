@@ -84,9 +84,9 @@ def make_layout():
                             ),
                             html.Div(html.H2("STATUS")),
                             html.Div(
-                                className="div-for-dropdown",
+                                className="div-for-radio",
                                 children=[
-                                    dcc.Dropdown(
+                                    dcc.Checklist(
                                         id="status",
                                         options=[
                                             {"label": "ACTIVE", "value": "ACTIVE"},
@@ -97,17 +97,16 @@ def make_layout():
                                             },
                                         ],
                                         value=["ACTIVE"],  # default
-                                        multi=True,
-                                        placeholder="Select status",
+                                        labelStyle={"display": "inline-block"},
                                         className="dropdown_selector",
                                     ),
                                 ],
                             ),
                             html.Div(html.H2("PERIOD OF HOLDING (IN DAYS)")),
                             html.Div(
-                                className="div-for-dropdown",
+                                className="div-for-radio",
                                 children=[
-                                    dcc.Dropdown(
+                                    dcc.Checklist(
                                         id="period",
                                         options=[
                                             {"label": "1", "value": "1"},
@@ -117,8 +116,7 @@ def make_layout():
                                             {"label": "28", "value": "28"},
                                         ],
                                         value=["1", "7", "14", "21", "28"],  # default
-                                        multi=True,
-                                        placeholder="Select periods",
+                                        labelStyle={"display": "inline-block"},
                                         className="dropdown_selector",
                                     ),
                                 ],
@@ -221,10 +219,12 @@ def chart2d_bubble(
     global df
     X = df.copy()
 
-    X, bubble_size, current_price = prepare_data.prepare_bubble(
+    X, bubble_size, current_price, current_iv = prepare_data.prepare_bubble(
         X, symbol, period, status, amounts
     )
-    fig = plots.plot_bubble(X=X, bubble_size=bubble_size, current_price=current_price)
+    fig = plots.plot_bubble(
+        X=X, bubble_size=bubble_size, current_price=current_price, current_iv=current_iv
+    )
 
     return fig
 

@@ -2,7 +2,9 @@ import pandas as pd
 import plotly.express as px
 
 
-def plot_bubble(X: pd.DataFrame, bubble_size: int, current_price: float):
+def plot_bubble(
+    X: pd.DataFrame, bubble_size: int, current_price: float, current_iv: int
+):
 
     fig = px.scatter(
         X,
@@ -11,7 +13,7 @@ def plot_bubble(X: pd.DataFrame, bubble_size: int, current_price: float):
         size="Option Size",
         size_max=bubble_size,
         color="Click to select",
-        title=f"Max Option-Size Value: {X['Option Size'].max()}",
+        title=f"Max Option-Size Value: {X['Option Size'].max()} - Current IV: {current_iv}",
         hover_name="Account",
         hover_data={
             "Break-even price": ":s",
@@ -81,11 +83,9 @@ def plot_pnl(agg: pd.DataFrame):
         },
         template="plotly_dark",
         color_discrete_sequence=["#45fff4", "#f76eb2"],
-        # width=700,
         hover_data={
             "Option Type": True,
             "Click to select": False,
-            # "profit": True,
         },
     )
 
