@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.express as px
 
 
-def plot_bubble(X: pd.DataFrame, title: str, bubble_size: int, current_price: float):
+def plot_bubble(X: pd.DataFrame, bubble_size: int, current_price: float):
 
     fig = px.scatter(
         X,
@@ -11,9 +11,10 @@ def plot_bubble(X: pd.DataFrame, title: str, bubble_size: int, current_price: fl
         size="Option Size",
         size_max=bubble_size,
         color="Click to select",
-        title=f"{title} - Max Option-Size Value: {X['Option Size'].max()}",
+        title=f"Max Option-Size Value: {X['Option Size'].max()}",
         hover_name="Account",
         hover_data={
+            "Break-even price": ":s",
             "Option Type": True,
             "Option ID": True,
             "Placed At": "|%b %d, %Y, %H:%M",  # same format as `Expires On` e.g. Dec 7, 2020, 12:02
@@ -63,21 +64,29 @@ def plot_bubble(X: pd.DataFrame, title: str, bubble_size: int, current_price: fl
     return fig
 
 
-def plot_pnl(agg: pd.DataFrame, symbol: str):
+def plot_pnl(agg: pd.DataFrame):
+
+    agg = agg.rename(columns={"type": "Option Type"})
+    agg["Click to select"] = agg["Option Type"]
 
     fig = px.bar(
         agg,
         x="pos",
         y="profit",
-        color="type",
-        title=f"{symbol} - P&L for LPs",
+        color="Click to select",
+        title="P&L for POOL LPs",
         labels={
             "profit": "Profit",
-            "pos": "",
+            "pos": "Group",
         },
         template="plotly_dark",
         color_discrete_sequence=["#45fff4", "#f76eb2"],
-        width=700,
+        # width=700,
+        hover_data={
+            "Option Type": True,
+            "Click to select": False,
+            # "profit": True,
+        },
     )
 
     fig.update_layout(

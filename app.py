@@ -8,7 +8,6 @@ import dash_core_components as dcc
 from dash.dependencies import Input, Output
 import numpy as np
 import pandas as pd
-from pycoingecko import CoinGeckoAPI
 
 import api
 import prepare_data
@@ -38,12 +37,13 @@ def get_new_data():
         )
     )
 
+    df = prepare_data.get_projected_profit(df)
+
 
 def get_new_data_every(period=300):
     """Update the data every 300 seconds"""
     while True:
         get_new_data()
-        print(df["timestamp"].max())
         print("data updated")
         time.sleep(period)
 
@@ -224,9 +224,7 @@ def chart2d_bubble(
     X, bubble_size, current_price = prepare_data.prepare_bubble(
         X, symbol, period, status, amounts
     )
-    fig = plots.plot_bubble(
-        X=X, title=symbol, bubble_size=bubble_size, current_price=current_price
-    )
+    fig = plots.plot_bubble(X=X, bubble_size=bubble_size, current_price=current_price)
 
     return fig
 
@@ -234,20 +232,40 @@ def chart2d_bubble(
 @app.callback(
     Output("chart2d_pnl", "figure"),
     [
+        Input("chart2d_bubble", "relayoutData"),
         Input("symbol", "value"),
         Input("period", "value"),
+        Input("status", "value"),
         Input("amounts", "value"),
         Input("invisible-div-callback-trigger", "children"),
     ],
 )
-def chart2d_pnl(symbol: str, period: str, amounts: typing.List[int], _):
+def chart2d_pnl(
+    relayoutData: dict,
+    symbol: str,
+    period: str,
+    status: typing.List[str],
+    amounts: typing.List[int],
+    _,
+):
 
     global df
     X = df.copy()
 
-    agg = prepare_data.prepare_pnl(X, symbol, period, amounts)
+    # this block is for the interactive charting capability
+    try:
+        expiration_right = relayoutData["xaxis.range[0]"]
+        expiration_left = relayoutData["xaxis.range[1]"]
+        strike_top = relayoutData["yaxis.range[0]"]
+        strike_btm = relayoutData["yaxis.range[1]"]
+        X = X[X["expiration"].between(expiration_right, expiration_left)]
+        X = X[X["strike"].between(strike_top, strike_btm)]
+    except:
+        pass
 
-    fig = plots.plot_pnl(agg=agg, symbol=symbol)
+    agg = prepare_data.prepare_pnl(X, symbol, period, status, amounts)
+
+    fig = plots.plot_pnl(agg=agg)
 
     return fig
 
