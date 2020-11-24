@@ -205,6 +205,8 @@ def slice_for_plotting(
 
     X = X.sort_values("type")
     X = X[X["symbol"] == symbol]
+    # price will stay the same for the below sections! (but must be after the symbol selector)
+    current_iv = int(X.loc[X["timestamp_unix"].idxmax()]["impliedVolatility"])
     X = X[X["period_days"].isin(period)]
     X = X[X["status"].isin(status)]
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
@@ -249,10 +251,12 @@ def slice_for_plotting(
 
     bubble_size = f(amounts[1])
 
-    return X, bubble_size, current_price
+    return X, bubble_size, current_price, current_iv
 
 
-def plot(X: pd.DataFrame, title: str, bubble_size: int, current_price: float):
+def plot(
+    X: pd.DataFrame, title: str, bubble_size: int, current_price: float, current_iv: int
+):
 
     fig = px.scatter(
         X,
@@ -261,7 +265,7 @@ def plot(X: pd.DataFrame, title: str, bubble_size: int, current_price: float):
         size="Option Size",
         size_max=bubble_size,
         color="Click to select",
-        title=f"{title} - Max Option-Size Value: {X['Option Size'].max()}",
+        title=f"{title} - Max Option-Size Value: {X['Option Size'].max()} - Current IV: {current_iv}",
         hover_name="Account",
         hover_data={
             "Option Type": True,
@@ -333,10 +337,16 @@ def chart2d_eth(
     X = df.copy()
     symbol = "ETH"
 
-    X, bubble_size, current_price = slice_for_plotting(
+    X, bubble_size, current_price, current_iv = slice_for_plotting(
         X, symbol, period, status, amounts
     )
-    fig = plot(X=X, title=symbol, bubble_size=bubble_size, current_price=current_price)
+    fig = plot(
+        X=X,
+        title=symbol,
+        bubble_size=bubble_size,
+        current_price=current_price,
+        current_iv=current_iv,
+    )
 
     return fig
 
@@ -361,10 +371,16 @@ def chart2d_wbtc(
     X = df.copy()
     symbol = "WBTC"
 
-    X, bubble_size, current_price = slice_for_plotting(
+    X, bubble_size, current_price, current_iv = slice_for_plotting(
         X, symbol, period, status, amounts
     )
-    fig = plot(X=X, title=symbol, bubble_size=bubble_size, current_price=current_price)
+    fig = plot(
+        X=X,
+        title=symbol,
+        bubble_size=bubble_size,
+        current_price=current_price,
+        current_iv=current_iv,
+    )
 
     return fig
 
