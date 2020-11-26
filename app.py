@@ -184,7 +184,7 @@ def make_layout():
                         children=[
                             dcc.Graph(
                                 id="chart2d_bubble",
-                                # config={"displayModeBar": False},
+                                config={"displayModeBar": False},
                             ),
                             # add two emtpy H1's to get some space between the plots
                             html.Div(html.H1("")),

@@ -14,52 +14,54 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
     calculate project profit for status==ACTIVE
     """
 
-    wbtc = df[df["symbol"] == "WBTC"]
-    eth = df[df["symbol"] == "ETH"]
-
     # for those I need to find a price (use coingecko)
     cg = CoinGeckoAPI()
 
+    time_col = "timestamp_unix"
+    currency = "usd"
+
     prices_btc = cg.get_coin_market_chart_range_by_id(
         id="bitcoin",
-        vs_currency="usd",
-        from_timestamp=wbtc["timestamp_unix"].min(),
-        to_timestamp=wbtc["timestamp_unix"].max(),
+        vs_currency=currency,
+        from_timestamp=df[df["symbol"] == "WBTC"][time_col].min(),
+        to_timestamp=df[df["symbol"] == "WBTC"][time_col].max(),
     )["prices"]
 
     prices_eth = cg.get_coin_market_chart_range_by_id(
         id="ethereum",
-        vs_currency="usd",
-        from_timestamp=eth["timestamp_unix"].min(),
-        to_timestamp=eth["timestamp_unix"].max(),
+        vs_currency=currency,
+        from_timestamp=df[df["symbol"] == "ETH"][time_col].min(),
+        to_timestamp=df[df["symbol"] == "ETH"][time_col].max(),
     )["prices"]
 
-    prices_btc = pd.DataFrame(prices_btc, columns=["timestamp_unix_gc", "price"])
+    time_col_cg = "timestamp_unix_gc"
+    prices_btc = pd.DataFrame(prices_btc, columns=[time_col_cg, "price"])
     prices_btc["symbol"] = "WBTC"
 
-    prices_eth = pd.DataFrame(prices_eth, columns=["timestamp_unix_gc", "price"])
+    prices_eth = pd.DataFrame(prices_eth, columns=[time_col_cg, "price"])
     prices_eth["symbol"] = "ETH"
 
     df_prices = pd.concat([prices_btc, prices_eth]).reset_index(drop=True)
 
-    # correct to secods
-    df_prices["timestamp_unix_gc"] = df_prices["timestamp_unix_gc"] // 1000
+    # from millisecond timestamp to seconds
+    df_prices[time_col_cg] //= 1000
 
+    # merge nearest historical prices to option creation timestamp
     df = pd.merge_asof(
-        df.sort_values("timestamp_unix"),
-        df_prices.sort_values("timestamp_unix_gc"),
-        left_on="timestamp_unix",
-        right_on="timestamp_unix_gc",
+        df.sort_values(time_col),
+        df_prices.sort_values(time_col_cg),
+        left_on=time_col,
+        right_on=time_col_cg,
         by="symbol",
         allow_exact_matches=True,
         direction="nearest",
     )
 
-    # to calculate the break even price, I need the totalFee in USD (the total usd costs which where paid)
+    # to calculate the break even price, I need the totalFee in USD
+    # (the total usd costs which where paid)
     df["totalFeeUSD"] = df["totalFee"] * df["price"]
     df["premium_usd"] = df["premium"] * df["price"]
 
-    # has to be different by put and call (for call its + for put its -)
     df["breakeven"] = np.where(
         df["type"] == "CALL",
         df["strike"]
@@ -67,13 +69,13 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
         df["strike"] - (df["totalFeeUSD"] / df["amount"]),
     )
 
-    # OTM
-    current_price_wbtc = cg.get_price(ids="bitcoin", vs_currencies="usd")["bitcoin"][
-        "usd"
+    # get latest prices
+    current_price_wbtc = cg.get_price(ids="bitcoin", vs_currencies=currency)["bitcoin"][
+        currency
     ]
-    current_price_eth = cg.get_price(ids="ethereum", vs_currencies="usd")["ethereum"][
-        "usd"
-    ]
+    current_price_eth = cg.get_price(ids="ethereum", vs_currencies=currency)[
+        "ethereum"
+    ][currency]
     df["current_price"] = np.where(
         df["symbol"] == "WBTC", current_price_wbtc, current_price_eth
     )
@@ -119,14 +121,14 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
     # else ITM
     df["group"] = np.where(df["profit"] == -df["premium"], "OTM", "ITM")
 
-    # round for plots
-    col_round = ["strike", "breakeven", "totalFee", "premium", "profit"]
-    df[col_round] = df[col_round].round(2)
-
     # there are some weird options (probably test cases) with very low/high strike prices
     # e.g. 1usd strike for 10 wbtc put option (ID == WBTC-9). there breakeven price will be
     # negative based on the above calculation so I set the min value to 0
     df["breakeven"] = np.where(df["breakeven"] < 0, 0, df["breakeven"])
+
+    # round for plots
+    col_round = ["strike", "breakeven", "totalFee", "premium", "profit"]
+    df[col_round] = df[col_round].round(2)
 
     return df
 

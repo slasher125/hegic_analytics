@@ -94,9 +94,6 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
     agg = agg.rename(columns={"type": "Option Type"})
     agg["Click to select"] = agg["Option Type"]
 
-    # same sort order (ITM OTM P&L)
-    agg = agg.sort_values("group")
-
     fig = px.bar(
         agg,
         x="group",
