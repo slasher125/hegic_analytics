@@ -9,6 +9,128 @@ from pycoingecko import CoinGeckoAPI
 cg = CoinGeckoAPI()
 
 
+def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    calculate project profit for status==ACTIVE
+    """
+
+    wbtc = df[df["symbol"] == "WBTC"]
+    eth = df[df["symbol"] == "ETH"]
+
+    # for those I need to find a price (use coingecko)
+    cg = CoinGeckoAPI()
+
+    prices_btc = cg.get_coin_market_chart_range_by_id(
+        id="bitcoin",
+        vs_currency="usd",
+        from_timestamp=wbtc["timestamp_unix"].min(),
+        to_timestamp=wbtc["timestamp_unix"].max(),
+    )["prices"]
+
+    prices_eth = cg.get_coin_market_chart_range_by_id(
+        id="ethereum",
+        vs_currency="usd",
+        from_timestamp=eth["timestamp_unix"].min(),
+        to_timestamp=eth["timestamp_unix"].max(),
+    )["prices"]
+
+    prices_btc = pd.DataFrame(prices_btc, columns=["timestamp_unix_gc", "price"])
+    prices_btc["symbol"] = "WBTC"
+
+    prices_eth = pd.DataFrame(prices_eth, columns=["timestamp_unix_gc", "price"])
+    prices_eth["symbol"] = "ETH"
+
+    df_prices = pd.concat([prices_btc, prices_eth]).reset_index(drop=True)
+
+    # correct to secods
+    df_prices["timestamp_unix_gc"] = df_prices["timestamp_unix_gc"] // 1000
+
+    df = pd.merge_asof(
+        df.sort_values("timestamp_unix"),
+        df_prices.sort_values("timestamp_unix_gc"),
+        left_on="timestamp_unix",
+        right_on="timestamp_unix_gc",
+        by="symbol",
+        allow_exact_matches=True,
+        direction="nearest",
+    )
+
+    # to calculate the break even price, I need the totalFee in USD (the total usd costs which where paid)
+    df["totalFeeUSD"] = df["totalFee"] * df["price"]
+    df["premium_usd"] = df["premium"] * df["price"]
+
+    # has to be different by put and call (for call its + for put its -)
+    df["breakeven"] = np.where(
+        df["type"] == "CALL",
+        df["strike"]
+        + (df["totalFeeUSD"] / df["amount"]),  # has to be scaled by amount size
+        df["strike"] - (df["totalFeeUSD"] / df["amount"]),
+    )
+
+    # OTM
+    current_price_wbtc = cg.get_price(ids="bitcoin", vs_currencies="usd")["bitcoin"][
+        "usd"
+    ]
+    current_price_eth = cg.get_price(ids="ethereum", vs_currencies="usd")["ethereum"][
+        "usd"
+    ]
+    df["current_price"] = np.where(
+        df["symbol"] == "WBTC", current_price_wbtc, current_price_eth
+    )
+
+    # The projected profit is only relevant for options with status ACTIVE cause
+    # the calculation of it is based on the current price which means that the projected
+    # profit for exercised and expired options won't match the actual profit! (but thats ok,
+    # as we only need it for ACTIVE anyways)
+    # I) OTM: projected_profit is simply -premium
+    df["projected_profit"] = np.where(
+        (df["type"] == "CALL") & (df["current_price"] < df["strike"]),
+        -df["premium"],
+        np.nan,
+    )
+
+    df["projected_profit"] = np.where(
+        (df["type"] == "PUT") & (df["current_price"] > df["strike"]),
+        -df["premium"],
+        df["projected_profit"],
+    )
+
+    # II) ITM
+    df["projected_profit"] = np.where(
+        (df["type"] == "CALL") & (df["current_price"] >= df["strike"]),
+        ((df["current_price"] - df["breakeven"]) * df["amount"]) / df["current_price"],
+        df["projected_profit"],
+    )
+
+    df["projected_profit"] = np.where(
+        (df["type"] == "PUT") & (df["current_price"] <= df["strike"]),
+        ((df["breakeven"] - df["current_price"]) * df["amount"]) / df["current_price"],
+        df["projected_profit"],
+    )
+
+    df["profit"] = np.where(
+        df["status"] == "ACTIVE", df["projected_profit"], df["profit"]
+    )
+
+    df = df.drop(columns=["projected_profit"])
+
+    # OTM is if the profit is simply the same as the negative premium
+    # e.g. premium was 10eth -> if the profit equals -10 then the option is OTM
+    # else ITM
+    df["group"] = np.where(df["profit"] == -df["premium"], "OTM", "ITM")
+
+    # round for plots
+    col_round = ["strike", "breakeven", "totalFee", "premium", "profit"]
+    df[col_round] = df[col_round].round(2)
+
+    # there are some weird options (probably test cases) with very low/high strike prices
+    # e.g. 1usd strike for 10 wbtc put option (ID == WBTC-9). there breakeven price will be
+    # negative based on the above calculation so I set the min value to 0
+    df["breakeven"] = np.where(df["breakeven"] < 0, 0, df["breakeven"])
+
+    return df
+
+
 def prepare_bubble(
     X: pd.DataFrame,
     symbol: str,
@@ -62,6 +184,7 @@ def prepare_bubble(
         "type": "Option Type",
         "premium": "Premium",
         "profit": "Profit",
+        "group": "Group",
     }
     X = X.rename(columns=col_mapping)
 
@@ -86,6 +209,8 @@ def prepare_pnl(
     period: str,
     status: typing.List[str],
     amounts: typing.List[int],
+    relayoutData: dict,
+    id_: int,
 ) -> pd.DataFrame:
     """
     main function to prepare data for P%L chart
@@ -101,136 +226,41 @@ def prepare_pnl(
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
     X = X[X["amount"].between(lb, ub)]
 
+    if id_ is not None:
+        # get ID
+        X["id"] = X["id"].str.split("-").apply(lambda x: x[1])
+        X = X[X["id"] == str(id_)]
+
+    # this block is for the interactive charting capability
+    try:
+        expiration_right = relayoutData["xaxis.range[0]"]
+        expiration_left = relayoutData["xaxis.range[1]"]
+        strike_top = relayoutData["yaxis.range[0]"]
+        strike_btm = relayoutData["yaxis.range[1]"]
+        X = X[X["expiration"].between(expiration_right, expiration_left)]
+        X = X[X["strike"].between(strike_top, strike_btm)]
+    except:
+        pass
+
     # now apply the specific stuff to obtain the P&L
     agg = (
-        X.groupby(["type", "pos"])["profit"]
+        X.groupby(["type", "group"])["profit"]
         .sum()
         .reset_index()
-        .sort_values(["type", "pos"])
+        .sort_values(["type", "group"])
         .reset_index(drop=True)
     )
 
-    # get total for plots
-    z = agg.groupby("type")[["profit"]].sum().reset_index()
-    z["pos"] = ["P&L", "P&L"]
-    z[agg.columns.tolist()]
-    agg = pd.concat([agg, z])
+    if id_ is not None or len(X) == 1 or agg["type"].nunique() == 1:
+        agg = pd.concat([agg, agg]).reset_index(drop=True)
+        agg.loc[1, "group"] = "P&L"
+    else:
+        # get total for plots
+        z = agg.groupby("type")[["profit"]].sum().reset_index()
+        z["group"] = ["P&L", "P&L"]
+        z[agg.columns.tolist()]
+        agg = pd.concat([agg, z])
 
-    agg["profit"] = np.where(agg["pos"] == "P&L", -agg["profit"], agg["profit"])
+    agg["profit"] = np.where(agg["group"] == "P&L", -agg["profit"], agg["profit"])
 
     return agg
-
-
-def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    calculate project profit for status==ACTIVE
-    """
-
-    X = df.copy()
-    X = X[X["status"] == "ACTIVE"]
-
-    wbtc = X[X["symbol"] == "WBTC"]
-    eth = X[X["symbol"] == "ETH"]
-
-    # for those I need to find a price (use coingecko)
-    cg = CoinGeckoAPI()
-
-    prices_btc = cg.get_coin_market_chart_range_by_id(
-        id="bitcoin",
-        vs_currency="usd",
-        from_timestamp=wbtc["timestamp_unix"].min(),
-        to_timestamp=wbtc["timestamp_unix"].max(),
-    )["prices"]
-
-    prices_eth = cg.get_coin_market_chart_range_by_id(
-        id="ethereum",
-        vs_currency="usd",
-        from_timestamp=eth["timestamp_unix"].min(),
-        to_timestamp=eth["timestamp_unix"].max(),
-    )["prices"]
-
-    prices_btc = pd.DataFrame(prices_btc, columns=["timestamp_unix_gc", "price"])
-    prices_btc["symbol"] = "WBTC"
-
-    prices_eth = pd.DataFrame(prices_eth, columns=["timestamp_unix_gc", "price"])
-    prices_eth["symbol"] = "ETH"
-
-    df_prices = pd.concat([prices_btc, prices_eth]).reset_index(drop=True)
-
-    # correct to secods
-    df_prices["timestamp_unix_gc"] = df_prices["timestamp_unix_gc"] // 1000
-
-    X = pd.merge_asof(
-        X.sort_values("timestamp_unix"),
-        df_prices.sort_values("timestamp_unix_gc"),
-        left_on="timestamp_unix",
-        right_on="timestamp_unix_gc",
-        by="symbol",
-        allow_exact_matches=True,
-        direction="nearest",
-    )
-
-    # to calculate the break even price, I need the totalFee in USD (the total usd costs which where paid)
-    # TODO(!) make sure that this is correct, I acutally might need to use the current_price here instead
-    X["totalFeeUSD"] = X["totalFee"] * X["price"]
-    X["premium_usd"] = X["premium"] * X["price"]
-
-    # has to be different by put and call (for call its + for put its -)
-    X["breakeven"] = np.where(
-        X["type"] == "CALL",
-        X["strike"]
-        + (X["totalFeeUSD"] / X["amount"]),  # has to be scaled by amount size
-        X["strike"] - (X["totalFeeUSD"] / X["amount"]),
-    )
-
-    # OTM
-    current_price_wbtc = cg.get_price(ids="bitcoin", vs_currencies="usd")["bitcoin"][
-        "usd"
-    ]
-    current_price_eth = cg.get_price(ids="ethereum", vs_currencies="usd")["ethereum"][
-        "usd"
-    ]
-    X["current_price"] = np.where(
-        X["symbol"] == "WBTC", current_price_wbtc, current_price_eth
-    )
-
-    # I) OTM: projected_profit is simply -premium
-    X["projected_profit"] = np.where(
-        (X["type"] == "CALL") & (X["current_price"] < X["strike"]),
-        -X["premium"],
-        np.nan,
-    )
-
-    X["projected_profit"] = np.where(
-        (X["type"] == "PUT") & (X["current_price"] > X["strike"]),
-        -X["premium"],
-        X["projected_profit"],
-    )
-
-    # II) ITM
-    X["projected_profit"] = np.where(
-        (X["type"] == "CALL") & (X["current_price"] >= X["strike"]),
-        ((X["current_price"] - X["breakeven"]) * X["amount"]) / X["current_price"],
-        X["projected_profit"],
-    )
-
-    X["projected_profit"] = np.where(
-        (X["type"] == "PUT") & (X["current_price"] <= X["strike"]),
-        ((X["breakeven"] - X["current_price"]) * X["amount"]) / X["current_price"],
-        X["projected_profit"],
-    )
-
-    # merge this stuff onto df
-    df = df.merge(X[["id", "projected_profit", "breakeven"]], how="left", on="id")
-    df["profit"] = np.where(
-        df["status"] == "ACTIVE", df["projected_profit"], df["profit"]
-    )
-
-    df = df.drop(columns=["projected_profit"])
-
-    df["pos"] = np.where(df["profit"] >= 0, "ITM", "OTM")
-
-    col_round = ["strike", "breakeven"]
-    df[col_round] = df[col_round].round(2)
-
-    return df

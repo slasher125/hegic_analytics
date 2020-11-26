@@ -84,9 +84,9 @@ def make_layout():
                             ),
                             html.Div(html.H2("STATUS")),
                             html.Div(
-                                className="div-for-radio",
+                                className="div-for-dropdown",
                                 children=[
-                                    dcc.Checklist(
+                                    dcc.Dropdown(
                                         id="status",
                                         options=[
                                             {"label": "ACTIVE", "value": "ACTIVE"},
@@ -97,16 +97,16 @@ def make_layout():
                                             },
                                         ],
                                         value=["ACTIVE"],  # default
-                                        labelStyle={"display": "inline-block"},
+                                        multi=True,
                                         className="dropdown_selector",
                                     ),
                                 ],
                             ),
                             html.Div(html.H2("PERIOD OF HOLDING (IN DAYS)")),
                             html.Div(
-                                className="div-for-radio",
+                                className="div-for-dropdown",
                                 children=[
-                                    dcc.Checklist(
+                                    dcc.Dropdown(
                                         id="period",
                                         options=[
                                             {"label": "1", "value": "1"},
@@ -116,7 +116,7 @@ def make_layout():
                                             {"label": "28", "value": "28"},
                                         ],
                                         value=["1", "7", "14", "21", "28"],  # default
-                                        labelStyle={"display": "inline-block"},
+                                        multi=True,
                                         className="dropdown_selector",
                                     ),
                                 ],
@@ -142,9 +142,26 @@ def make_layout():
                                     "Deciles 0-1 covers the lowest 10% of options, deciles 9-10 the top 10% of options etc."
                                 )
                             ),
+                            html.Div(html.H2("SEARCH BY OPTION ID")),
+                            html.Div(
+                                className="div-for-input",
+                                children=[
+                                    dcc.Input(
+                                        id="id",
+                                        type="number",
+                                        placeholder="ID",
+                                        className="input_selector",
+                                    )
+                                ],
+                            ),
+                            html.Div(
+                                html.P(
+                                    "Remove the ID from the search box to get back to the overview of options."
+                                )
+                            ),
                             html.Div(html.H2("GENERAL INFO")),
                             html.Div(
-                                className="div-for-dropdown",  # to shortedn the distance btw header and text
+                                className="div-for-dropdown",  # to shorten the distance btw header and text
                                 children=[
                                     html.P(
                                         "Click-and-select directly on the plots to filter to a specific date range/cluster of options."
@@ -167,7 +184,7 @@ def make_layout():
                         children=[
                             dcc.Graph(
                                 id="chart2d_bubble",
-                                config={"displayModeBar": False},
+                                # config={"displayModeBar": False},
                             ),
                             # add two emtpy H1's to get some space between the plots
                             html.Div(html.H1("")),
@@ -205,6 +222,7 @@ app.layout = make_layout
         Input("period", "value"),
         Input("status", "value"),
         Input("amounts", "value"),
+        Input("id", "value"),
         Input("invisible-div-callback-trigger", "children"),
     ],
 )
@@ -213,6 +231,7 @@ def chart2d_bubble(
     period: str,
     status: str,
     amounts: typing.List[int],
+    id_: int,
     _,
 ):
 
@@ -222,6 +241,10 @@ def chart2d_bubble(
     X, bubble_size, current_price, current_iv = prepare_data.prepare_bubble(
         X, symbol, period, status, amounts
     )
+
+    if id_ is not None:
+        X = X[X["Option ID"] == str(id_)]
+
     fig = plots.plot_bubble(
         X=X, bubble_size=bubble_size, current_price=current_price, current_iv=current_iv
     )
@@ -237,6 +260,7 @@ def chart2d_bubble(
         Input("period", "value"),
         Input("status", "value"),
         Input("amounts", "value"),
+        Input("id", "value"),
         Input("invisible-div-callback-trigger", "children"),
     ],
 )
@@ -246,26 +270,18 @@ def chart2d_pnl(
     period: str,
     status: typing.List[str],
     amounts: typing.List[int],
+    id_: int,
     _,
 ):
 
     global df
     X = df.copy()
 
-    # this block is for the interactive charting capability
-    try:
-        expiration_right = relayoutData["xaxis.range[0]"]
-        expiration_left = relayoutData["xaxis.range[1]"]
-        strike_top = relayoutData["yaxis.range[0]"]
-        strike_btm = relayoutData["yaxis.range[1]"]
-        X = X[X["expiration"].between(expiration_right, expiration_left)]
-        X = X[X["strike"].between(strike_top, strike_btm)]
-    except:
-        pass
+    agg = prepare_data.prepare_pnl(
+        X, symbol, period, status, amounts, relayoutData, id_
+    )
 
-    agg = prepare_data.prepare_pnl(X, symbol, period, status, amounts)
-
-    fig = plots.plot_pnl(agg=agg)
+    fig = plots.plot_pnl(agg=agg, symbol=symbol)
 
     return fig
 
@@ -276,4 +292,4 @@ executor.submit(get_new_data_every)
 
 # Run the app
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server()

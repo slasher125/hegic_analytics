@@ -500,6 +500,13 @@ a {
     width: 100%;
     text-align: left;
     margin-top: -0.8em;
+    
+  }
+.div-for-input {
+    width: 100%;
+    text-align: left;
+    margin-top: -0.8em;
+    padding-bottom: 15px;
   }
 .logo {
   height: 50px;
@@ -667,3 +674,18 @@ color: #defefe;
 .div-for-markdown{
     font-size: 5px;
 }
+
+
+/* to adjust the colors of the drop down memus*/
+.input_selector .Select-value {
+    background-color:#45fff4;
+    color: #45fff4;
+}
+/* .input_selector .VirtualizedSelectOption {
+    color: #45fff4;
+} */
+
+/* .input_selector .VirtualizedSelectFocusedOption {
+    background-color: green;
+    color:green;
+  } */
