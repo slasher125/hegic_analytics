@@ -50,7 +50,7 @@ def plot_bubble(
         },  # this removes the native plotly background
         font_family="Exo 2",
         font_color="#defefe",
-        font_size=15,
+        font_size=13,
         legend={  # adjust the location of the legend
             "orientation": "h",
             "yanchor": "bottom",
@@ -67,7 +67,7 @@ def plot_bubble(
         y=current_price,
         line_color="#ffd24c",
         annotation=dict(
-            font_size=15,
+            font_size=13,
             font_family="Exo 2",
             text=f"Current Price: {current_price}",
             font_color="#ffd24c",
@@ -115,8 +115,6 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
         },
         text="profit",
         category_orders={"group": ["ITM", "OTM", "P&L"]},
-        # height=500,
-        # width=500,
     )
 
     fig.update_layout(
@@ -126,14 +124,10 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
         },  # this removes the native plotly background
         font_family="Exo 2",
         font_color="#defefe",
-        font_size=15,
-        legend={  # adjust the location of the legend
-            "orientation": "h",
-            "yanchor": "bottom",
-            "y": 1.02,
-            "xanchor": "right",
-            "x": 1,
-        },
+        font_size=13,
+        showlegend=False,
+        xaxis_title="",
+        title_x=0.5,
     )
 
     # move xaxis name closer to plot
@@ -142,53 +136,66 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
     return fig
 
 
-def plot_pool_balance(balances: dict, symbol: str):
+def plot_pool_balance(balances: pd.DataFrame, symbol: str):
 
-    totalBalance = balances[symbol]["totalBalance"]
-    availableBalance = balances[symbol]["availableBalance"]
-    util_rate = round(balances[symbol]["util_ratio"] * 100, 2)
+    agg = balances.loc[symbol].to_frame().T[["availableBalance", "totalBalance"]]
+    util_rate = round(balances.loc[symbol]["util_ratio"] * 100, 2)
 
-    fig = go.Figure(
-        data=[
-            go.Bar(
-                name="Total Balance",
-                x=["Balance"],
-                y=[totalBalance],
-                text=[totalBalance],
-                textposition="auto",
-                marker_color=["#45fff4"],
-                opacity=0.5,
-            ),
-            go.Bar(
-                name="Available Balance",
-                x=["Balance"],
-                y=[availableBalance],
-                text=[availableBalance],
-                textposition="auto",
-                marker_color=["#45fff4"],
-            ),
-        ]
+    fig = px.bar(
+        agg,
+        barmode="overlay",
+        color_discrete_sequence=["#45fff4", "#45fff4"],
     )
-    # Change the bar mode
-    fig.update_traces(texttemplate="%{text:.0f}")
 
     fig.update_layout(
         {
             "plot_bgcolor": "rgba(0, 0, 0, 0)",
             "paper_bgcolor": "rgba(0, 0, 0, 0)",
         },  # this removes the native plotly background
-        barmode="overlay",
-        title=f"Pool utilization rate: {util_rate}%",
+        title=f"LP Pool Balance - UR: {util_rate}%",
         font_family="Exo 2",
         font_color="#defefe",
-        font_size=15,
-        # width=500,
+        font_size=13,
         yaxis_title=f"Nb of {symbol}",
         showlegend=False,
         template="plotly_dark",
+        title_x=0.5,
     )
 
     # move xaxis name closer to plot
     fig.update_yaxes(title_standoff=0)
+    fig.update_xaxes(showticklabels=False, title="")
+
+    return fig
+
+
+def plot_put_call_ratio(df: pd.DataFrame, symbol: str):
+
+    X = (
+        df[(df["status"] == "ACTIVE") & (df["symbol"] == symbol)]["type"]
+        .value_counts()
+        .to_frame("Nb")
+    )
+    X = X.reset_index().rename(columns={"index": "Option Type"})
+    fig = px.pie(
+        X,
+        values="Nb",
+        names="Option Type",
+        color_discrete_sequence=["#45fff4", "#f76eb2"],
+    )
+
+    fig.update_layout(
+        {
+            "plot_bgcolor": "rgba(0, 0, 0, 0)",
+            "paper_bgcolor": "rgba(0, 0, 0, 0)",
+        },  # this removes the native plotly background
+        title="Put-Call Ratio",
+        font_family="Exo 2",
+        font_color="#defefe",
+        font_size=13,
+        showlegend=False,
+        template="plotly_dark",
+        title_x=0.5,
+    )
 
     return fig
