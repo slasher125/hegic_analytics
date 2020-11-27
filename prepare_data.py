@@ -270,7 +270,7 @@ def prepare_pnl(
     return agg
 
 
-def get_pool_balances() -> dict:
+def get_pool_balances() -> pd.DataFrame:
     pool_balance_wbtc = _run_query(queries["poolBalances_latest_WBTC"])
     pool_balance_eth = _run_query(queries["poolBalances_latest_ETH"])
 
@@ -281,6 +281,5 @@ def get_pool_balances() -> dict:
     balances["util_ratio"] = 1 - (
         balances["availableBalance"] / balances["totalBalance"]
     )
-    balances = balances.T.to_dict()
 
     return balances

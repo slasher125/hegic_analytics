@@ -6,17 +6,13 @@ import dash
 import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
+import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 
 import api
 import prepare_data
 import plots
-
-
-# I deliberatitly use integers here instead of float to the get the
-# correct axis labels for the decile slider
-deciles = {int(i): str(i) for i in np.arange(0, 11, 1)}
 
 
 def get_new_data():
@@ -131,7 +127,9 @@ def make_layout():
                                         min=0,
                                         max=10,
                                         step=None,
-                                        marks=deciles,
+                                        marks={
+                                            int(i): str(i) for i in np.arange(0, 11, 1)
+                                        },
                                         value=[0, 10],
                                         allowCross=False,
                                         className="dropdown_selector",
@@ -183,20 +181,35 @@ def make_layout():
                     html.Div(
                         className="eight columns div-for-charts bg-grey",
                         children=[
-                            dcc.Graph(
-                                id="chart2d_bubble",
-                                config={"displayModeBar": False},
+                            dbc.Row(
+                                dbc.Col(
+                                    dcc.Graph(
+                                        id="chart2d_bubble",
+                                        config={"displayModeBar": False},
+                                    )
+                                )
                             ),
-                            # add two emtpy H1's to get some space between the plots
-                            html.Div(html.H1("")),
-                            dcc.Graph(
-                                id="chart2d_pnl",
-                                config={"displayModeBar": False},
-                            ),
-                            html.Div(html.H1("")),
-                            dcc.Graph(
-                                id="chart2d_balance",
-                                config={"displayModeBar": False},
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        dcc.Graph(
+                                            id="chart2d_pnl",
+                                            config={"displayModeBar": False},
+                                        )
+                                    ),
+                                    dbc.Col(
+                                        dcc.Graph(
+                                            id="chart2d_balance",
+                                            config={"displayModeBar": False},
+                                        )
+                                    ),
+                                    dbc.Col(
+                                        dcc.Graph(
+                                            id="chart2d_putcall",
+                                            config={"displayModeBar": False},
+                                        )
+                                    ),
+                                ]
                             ),
                         ],
                     ),
@@ -207,7 +220,7 @@ def make_layout():
 
 
 # Initialise the app
-app = dash.Dash(__name__)
+app = dash.Dash(external_stylesheets=[dbc.themes.GRID])
 
 # for gunicorn
 server = app.server
@@ -307,6 +320,25 @@ def chart2d_balance(
     global balances
 
     fig = plots.plot_pool_balance(balances, symbol)
+
+    return fig
+
+
+@app.callback(
+    Output("chart2d_putcall", "figure"),
+    [
+        Input("symbol", "value"),
+        Input("invisible-div-callback-trigger", "children"),
+    ],
+)
+def chart2d_putcall(
+    symbol: str,
+    _,
+):
+
+    global df
+
+    fig = plots.plot_put_call_ratio(df, symbol)
 
     return fig
 
