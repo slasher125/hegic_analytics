@@ -1,4 +1,5 @@
 import pandas as pd
+import plotly.graph_objects as go
 import plotly.express as px
 
 
@@ -94,6 +95,8 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
     agg = agg.rename(columns={"type": "Option Type"})
     agg["Click to select"] = agg["Option Type"]
 
+    agg = agg.round(2)
+
     fig = px.bar(
         agg,
         x="group",
@@ -110,6 +113,10 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
             "Option Type": True,
             "Click to select": False,
         },
+        text="profit",
+        category_orders={"group": ["ITM", "OTM", "P&L"]},
+        # height=500,
+        # width=500,
     )
 
     fig.update_layout(
@@ -127,6 +134,58 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
             "xanchor": "right",
             "x": 1,
         },
+    )
+
+    # move xaxis name closer to plot
+    fig.update_yaxes(title_standoff=0)
+
+    return fig
+
+
+def plot_pool_balance(balances: dict, symbol: str):
+
+    totalBalance = balances[symbol]["totalBalance"]
+    availableBalance = balances[symbol]["availableBalance"]
+    util_rate = round(balances[symbol]["util_ratio"] * 100, 2)
+
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                name="Total Balance",
+                x=["Balance"],
+                y=[totalBalance],
+                text=[totalBalance],
+                textposition="auto",
+                marker_color=["#45fff4"],
+                opacity=0.5,
+            ),
+            go.Bar(
+                name="Available Balance",
+                x=["Balance"],
+                y=[availableBalance],
+                text=[availableBalance],
+                textposition="auto",
+                marker_color=["#45fff4"],
+            ),
+        ]
+    )
+    # Change the bar mode
+    fig.update_traces(texttemplate="%{text:.0f}")
+
+    fig.update_layout(
+        {
+            "plot_bgcolor": "rgba(0, 0, 0, 0)",
+            "paper_bgcolor": "rgba(0, 0, 0, 0)",
+        },  # this removes the native plotly background
+        barmode="overlay",
+        title=f"Pool utilization rate: {util_rate}%",
+        font_family="Exo 2",
+        font_color="#defefe",
+        font_size=15,
+        # width=500,
+        yaxis_title=f"Nb of {symbol}",
+        showlegend=False,
+        template="plotly_dark",
     )
 
     # move xaxis name closer to plot

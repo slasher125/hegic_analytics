@@ -21,7 +21,7 @@ deciles = {int(i): str(i) for i in np.arange(0, 11, 1)}
 
 def get_new_data():
     """Updates the global variable 'df' with new data"""
-    global df
+    global df, balances
     df = api.get_data("options")
 
     # the status from the subgraph data will only change if
@@ -38,6 +38,7 @@ def get_new_data():
     )
 
     df = prepare_data.get_projected_profit(df)
+    balances = prepare_data.get_pool_balances()
 
 
 def get_new_data_every(period=300):
@@ -192,6 +193,11 @@ def make_layout():
                                 id="chart2d_pnl",
                                 config={"displayModeBar": False},
                             ),
+                            html.Div(html.H1("")),
+                            dcc.Graph(
+                                id="chart2d_balance",
+                                config={"displayModeBar": False},
+                            ),
                         ],
                     ),
                 ],
@@ -282,6 +288,25 @@ def chart2d_pnl(
     )
 
     fig = plots.plot_pnl(agg=agg, symbol=symbol)
+
+    return fig
+
+
+@app.callback(
+    Output("chart2d_balance", "figure"),
+    [
+        Input("symbol", "value"),
+        Input("invisible-div-callback-trigger", "children"),
+    ],
+)
+def chart2d_balance(
+    symbol: str,
+    _,
+):
+
+    global balances
+
+    fig = plots.plot_pool_balance(balances, symbol)
 
     return fig
 
