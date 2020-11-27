@@ -65,8 +65,6 @@ def get_data(content: str) -> pd.DataFrame:
     # keep the unix timestamp
     df["timestamp_unix"] = df["timestamp"]
 
-    df["block"] = df["block"].astype(int)
-
     if content == "options":
         cols = [
             "amount",
@@ -92,6 +90,7 @@ def get_data(content: str) -> pd.DataFrame:
             2419200: 28,
         }
         df["period_days"] = df["period"].map(duration_mapping)
+        df["block"] = df["block"].astype(int)
 
     elif content == "poolBalances":
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
@@ -148,6 +147,20 @@ queries = {
         availableBalance
         totalBalance
         currentRatio
+        }
+        }""",
+    "poolBalances_latest_WBTC": """{ 
+        poolBalances(where: {symbol: "WBTC", type: "PROVIDE"}, first: 1, orderBy: timestamp, orderDirection: desc) {
+        symbol
+        availableBalance
+        totalBalance
+        }
+        }""",
+    "poolBalances_latest_ETH": """{ 
+        poolBalances(where: {symbol: "ETH", type: "PROVIDE"}, first: 1, orderBy: timestamp, orderDirection: desc) {
+        symbol
+        availableBalance
+        totalBalance
         }
         }""",
     "bondingCurveEvents": """{ 

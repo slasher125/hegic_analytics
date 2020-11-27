@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from pycoingecko import CoinGeckoAPI
 
+from api import _run_query, queries
+
 
 # launch cg api
 cg = CoinGeckoAPI()
@@ -266,3 +268,18 @@ def prepare_pnl(
     agg["profit"] = np.where(agg["group"] == "P&L", -agg["profit"], agg["profit"])
 
     return agg
+
+
+def get_pool_balances() -> pd.DataFrame:
+    pool_balance_wbtc = _run_query(queries["poolBalances_latest_WBTC"])
+    pool_balance_eth = _run_query(queries["poolBalances_latest_ETH"])
+
+    f = lambda x: pd.DataFrame(x["data"]["poolBalances"]).set_index("symbol")
+    balances_eth = f(pool_balance_eth)
+    balances_wbtc = f(pool_balance_wbtc)
+    balances = pd.concat([balances_eth, balances_wbtc]).astype("float64")
+    balances["util_ratio"] = 1 - (
+        balances["availableBalance"] / balances["totalBalance"]
+    )
+
+    return balances
