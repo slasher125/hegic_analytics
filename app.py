@@ -220,7 +220,7 @@ def make_layout():
 
 
 # Initialise the app
-app = dash.Dash(external_stylesheets=[dbc.themes.GRID])
+app = dash.Dash(__name__)
 
 # for gunicorn
 server = app.server
