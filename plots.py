@@ -171,15 +171,14 @@ def plot_pool_balance(balances: pd.DataFrame, symbol: str):
 
 def plot_put_call_ratio(df: pd.DataFrame, symbol: str):
 
-    X = (
-        df[(df["status"] == "ACTIVE") & (df["symbol"] == symbol)]["type"]
-        .value_counts()
-        .to_frame("Nb")
-    )
-    X = X.reset_index().rename(columns={"index": "Option Type"})
+    X = df[(df["status"] == "ACTIVE") & (df["symbol"] == symbol)]
+    X = X.groupby('type')['amount'].sum().to_frame('Volume')
+    X['pct'] = X['Volume'] / X['Volume'].sum()
+    X = X.reset_index().rename(columns={"type": "Option Type"})
+    
     fig = px.pie(
         X,
-        values="Nb",
+        values="Volume",
         names="Option Type",
         color_discrete_sequence=["#45fff4", "#f76eb2"],
     )
