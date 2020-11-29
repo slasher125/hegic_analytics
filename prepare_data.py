@@ -201,7 +201,6 @@ def prepare_bubble(
     bubble_size_min = 10
     bubble_size_max = 100
     f = lambda q: bubble_size_min + q * 40 if q <= 0.9 else bubble_size_max
-
     bubble_size = f(amounts[1])
 
     return X, bubble_size, current_price, current_iv
@@ -214,7 +213,7 @@ def prepare_pnl(
     status: typing.List[str],
     amounts: typing.List[int],
     relayoutData: dict,
-    id_: int,
+    id_: str,
 ) -> pd.DataFrame:
     """
     main function to prepare data for P%L chart
@@ -230,10 +229,15 @@ def prepare_pnl(
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
     X = X[X["amount"].between(lb, ub)]
 
-    if id_ is not None:
-        # get ID
-        X["id"] = X["id"].str.split("-").apply(lambda x: x[1])
-        X = X[X["id"] == str(id_)]
+    if id_ is not None and len(id_) > 0:
+        # first check if this ID is even in the select symbol set
+        if len(id_) >= 40:
+            # filter to unique account address (can have [0, inf) rows)
+            X = X[X["account"].str.lower() == id_.lower()]
+        else:
+            # fitler to unique option ID (results in 1 row!)
+            X["id"] = X["id"].str.split("-").apply(lambda x: x[1])
+            X = X[X["id"] == id_]
 
     # this block is for the interactive charting capability
     try:
@@ -255,15 +259,11 @@ def prepare_pnl(
         .reset_index(drop=True)
     )
 
-    if id_ is not None or len(X) == 1 or agg["type"].nunique() == 1:
-        agg = pd.concat([agg, agg]).reset_index(drop=True)
-        agg.loc[1, "group"] = "P&L"
-    else:
-        # get total for plots
-        z = agg.groupby("type")[["profit"]].sum().reset_index()
-        z["group"] = ["P&L", "P&L"]
-        z[agg.columns.tolist()]
-        agg = pd.concat([agg, z])
+    # get total for plots
+    z = agg.groupby("type")[["profit"]].sum().reset_index()
+    z["group"] = ["P&L"] * len(z)
+    z = z[agg.columns.tolist()]
+    agg = pd.concat([agg, z])
 
     agg["profit"] = np.where(agg["group"] == "P&L", -agg["profit"], agg["profit"])
 

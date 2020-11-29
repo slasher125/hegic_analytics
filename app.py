@@ -7,6 +7,7 @@ import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
+from dash_table import DataTable
 import numpy as np
 import pandas as pd
 
@@ -141,15 +142,16 @@ def make_layout():
                                     "Deciles 0-1 covers the lowest 10% of options, deciles 9-10 the top 10% of options etc."
                                 )
                             ),
-                            html.Div(html.H2("SEARCH BY OPTION ID")),
+                            html.Div(html.H2("SEARCH BY OPTION ID or ACCOUNT")),
                             html.Div(
                                 className="div-for-input",
                                 children=[
                                     dcc.Input(
                                         id="id",
-                                        type="number",
-                                        placeholder="ID",
+                                        type="text",
+                                        placeholder="ID or Account",
                                         className="input_selector",
+                                        multiple=False,
                                     )
                                 ],
                             ),
@@ -250,7 +252,7 @@ def chart2d_bubble(
     period: str,
     status: str,
     amounts: typing.List[int],
-    id_: int,
+    id_: str,
     _,
 ):
 
@@ -261,11 +263,18 @@ def chart2d_bubble(
         X, symbol, period, status, amounts
     )
 
-    if id_ is not None:
-        X = X[X["Option ID"] == str(id_)]
+    if id_ is not None and len(id_) > 0:
+        if len(id_) >= 40:
+            X = X[X["Account"].str.lower() == id_.lower()]
+        else:
+            X = X[X["Option ID"] == id_]
 
     fig = plots.plot_bubble(
-        X=X, bubble_size=bubble_size, current_price=current_price, current_iv=current_iv
+        X=X,
+        bubble_size=bubble_size,
+        current_price=current_price,
+        current_iv=current_iv,
+        symbol=symbol,
     )
 
     return fig
@@ -289,18 +298,18 @@ def chart2d_pnl(
     period: str,
     status: typing.List[str],
     amounts: typing.List[int],
-    id_: int,
+    id_: str,
     _,
 ):
 
-    global df
+    global df, balances
     X = df.copy()
 
     agg = prepare_data.prepare_pnl(
         X, symbol, period, status, amounts, relayoutData, id_
     )
 
-    fig = plots.plot_pnl(agg=agg, symbol=symbol)
+    fig = plots.plot_pnl(agg=agg, balances=balances, symbol=symbol)
 
     return fig
 
