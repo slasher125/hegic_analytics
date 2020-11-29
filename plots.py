@@ -4,7 +4,11 @@ import plotly.express as px
 
 
 def plot_bubble(
-    X: pd.DataFrame, bubble_size: int, current_price: float, current_iv: int
+    X: pd.DataFrame,
+    bubble_size: int,
+    current_price: float,
+    current_iv: float,
+    symbol: str,
 ):
 
     # hegic colors, first one is for calls (green), second for puts (red)
@@ -17,6 +21,13 @@ def plot_bubble(
         elif X["Option Type"].values[0] == "PUT":
             colors = [colors[1]]
 
+    option_size = X["Option Size"].max()
+    nb_put_call = X["Option Type"].value_counts()
+    nb_unique_acc = X["Account"].nunique()
+    volume = X["Option Size"].sum()
+
+    title = f"""Puts: {nb_put_call['PUT'] if 'PUT' in nb_put_call else 0} Calls: {nb_put_call['CALL'] if 'CALL' in nb_put_call else 0} | Volume: {volume:.2f} {symbol} | Max Option-Size: {option_size} {symbol} | Unique Accounts: {nb_unique_acc} | Current IV: {current_iv}"""
+
     fig = px.scatter(
         X,
         x="Expires On",
@@ -24,7 +35,7 @@ def plot_bubble(
         size="Option Size",
         size_max=bubble_size,
         color="Click to select",
-        title=f"Max Option-Size Value: {X['Option Size'].max()} - Current IV: {current_iv}",
+        title=title,
         hover_name="Account",
         hover_data={
             "Break-even price": ":s",
@@ -78,7 +89,7 @@ def plot_bubble(
     return fig
 
 
-def plot_pnl(agg: pd.DataFrame, symbol: str):
+def plot_pnl(agg: pd.DataFrame, balances: pd.DataFrame, symbol: str):
 
     # hegic colors, first one is for calls (green), second for puts (red)
     colors = ["#45fff4", "#f76eb2"]
@@ -94,15 +105,23 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
 
     agg = agg.rename(columns={"type": "Option Type"})
     agg["Click to select"] = agg["Option Type"]
-
     agg = agg.round(2)
+
+    pl_pct = round(
+        (
+            agg[agg["group"] == "P&L"]["profit"].sum()
+            / balances.loc[symbol]["totalBalance"]
+        )
+        * 100,
+        3,
+    )
 
     fig = px.bar(
         agg,
         x="group",
         y="profit",
         color="Click to select",
-        title="P&L for POOL LPs",
+        title=f"POOL P&L for selected range: {pl_pct}%",
         labels={
             "profit": f"Profit in {symbol}",
             "group": "Group",
@@ -115,6 +134,7 @@ def plot_pnl(agg: pd.DataFrame, symbol: str):
         },
         text="profit",
         category_orders={"group": ["ITM", "OTM", "P&L"]},
+        height=550,
     )
 
     fig.update_layout(
@@ -140,11 +160,12 @@ def plot_pool_balance(balances: pd.DataFrame, symbol: str):
 
     agg = balances.loc[symbol].to_frame().T[["availableBalance", "totalBalance"]]
     util_rate = round(balances.loc[symbol]["util_ratio"] * 100, 2)
-
+    agg = agg.round(2)
     fig = px.bar(
         agg,
         barmode="overlay",
         color_discrete_sequence=["#45fff4", "#45fff4"],
+        height=400,
     )
 
     fig.update_layout(
@@ -172,15 +193,18 @@ def plot_pool_balance(balances: pd.DataFrame, symbol: str):
 def plot_put_call_ratio(df: pd.DataFrame, symbol: str):
 
     X = df[(df["status"] == "ACTIVE") & (df["symbol"] == symbol)]
-    X = X.groupby('type')['amount'].sum().to_frame('Volume')
-    X['pct'] = X['Volume'] / X['Volume'].sum()
+    X = X.groupby("type")["amount"].sum().to_frame("Volume")
+    X["pct"] = X["Volume"] / X["Volume"].sum()
     X = X.reset_index().rename(columns={"type": "Option Type"})
-    
+
     fig = px.pie(
         X,
         values="Volume",
         names="Option Type",
         color_discrete_sequence=["#45fff4", "#f76eb2"],
+        hover_data={
+            "Volume": ":.2f",
+        },
     )
 
     fig.update_layout(

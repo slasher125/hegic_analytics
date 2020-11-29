@@ -467,7 +467,7 @@ Taken from https://codepen.io/chriddyp/pen/bWLwgP.css
   .div-for-charts{
     display: flex;
     flex-direction: column;
-    height: 200vh;
+    height: 300vh;
     width: 100%;
   }
   #histogram {
@@ -687,3 +687,19 @@ Taken from https://codepen.io/chriddyp/pen/bWLwgP.css
       background-color: green;
       color:green;
     } */
+
+/* to prevent data table highlighting */
+.dash-spreadsheet-container .dash-spreadsheet-inner table {
+    border-collapse: collapse;
+    font-family: monospace;
+    --accent: transparent  !important;
+    --border: transparent !important;
+    --text-color: transparent !important;
+    --hover: transparent !important;
+    --background-color-ellipses: transparent !important;
+    --faded-text: transparent !important;
+    --faded-text-header: transparent !important;
+    --selected-background: transparent !important;
+    --faded-dropdown: transparent !important;
+    --muted: transparent !important;
+}
