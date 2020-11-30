@@ -105,7 +105,7 @@ def plot_pnl(agg: pd.DataFrame, balances: pd.DataFrame, symbol: str):
 
     agg = agg.rename(columns={"type": "Option Type"})
     agg["Click to select"] = agg["Option Type"]
-    agg = agg.round(2)
+    agg = agg.round(3)
 
     pl_pct = round(
         (
@@ -159,13 +159,16 @@ def plot_pnl(agg: pd.DataFrame, balances: pd.DataFrame, symbol: str):
 def plot_pool_balance(balances: pd.DataFrame, symbol: str):
 
     agg = balances.loc[symbol].to_frame().T[["availableBalance", "totalBalance"]]
-    util_rate = round(balances.loc[symbol]["util_ratio"] * 100, 2)
+    util_rate = round(balances.loc[symbol]["util_ratio"] * 100, 3)
     agg = agg.round(2)
     fig = px.bar(
         agg,
         barmode="overlay",
         color_discrete_sequence=["#45fff4", "#45fff4"],
         height=400,
+        labels={
+            "index": "Symbol",
+        },
     )
 
     fig.update_layout(
@@ -232,12 +235,16 @@ def plot_pnl_pct_change(df_pct_change: pd.DataFrame, current_price: float):
         df_pct_change,
         x="pct",
         y="pnl",
-        title="Projected Pool P&L (in %) for selected range based on spot price changes",
+        title="Projected Pool P&L (in %) based on spot price changes",
         template="plotly_dark",
         color_discrete_sequence=["#45fff4"],
+        hover_data={
+            "projected_price": True,
+        },
         labels={
             "pct": "Percentage change",
             "pnl": "Projected P&L",
+            "projected_price": "Spot Price",
         },
     )
     fig.update_traces(mode="markers+lines")

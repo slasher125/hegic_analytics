@@ -132,7 +132,7 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
     # to get an overview of how the pools P&L ranges with changes pct-changes (+/- 0-20 pct) in the spot price
     # the below values will be bonkers for no longer active options, so set them to Nan later on
     # we only need this for active stuff
-    for i in np.arange(0, 0.21, 0.01):
+    for i in np.arange(0, 0.26, 0.01):
         i = round(i, 2)
 
         # if price increases (this will be good for the calls and bad for the puts)
@@ -355,7 +355,7 @@ def get_pool_balances() -> pd.DataFrame:
     return balances
 
 
-def get_pnl_pct_changes(
+def prepare_pnl_pct_changes(
     df: pd.DataFrame,
     balances: pd.DataFrame,
     relayoutData: dict,
@@ -367,6 +367,13 @@ def get_pnl_pct_changes(
     code for aggregating data to plot P&L for different pct changes in spot price
     """
 
+    if symbol == "WBTC":
+        symbol_cg = "bitcoin"
+    elif symbol == "ETH":
+        symbol_cg = "ethereum"
+
+    current_price = cg.get_price(ids=symbol_cg, vs_currencies="usd")[symbol_cg]["usd"]
+
     X = df.copy()
 
     # scale the decile amounts to proper deciles e.g. from 5 -> 0.5
@@ -374,8 +381,6 @@ def get_pnl_pct_changes(
     amounts = [i / 10 for i in amounts]
 
     X = X[X["symbol"] == symbol]
-    current_price = X["current_price"].unique()[0]
-
     X = X[X["period_days"].isin(period)]
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
     X = X[X["amount"].between(lb, ub)]
@@ -407,5 +412,13 @@ def get_pnl_pct_changes(
     x["sign"] = x["index"].str.split("_").apply(lambda x: x[-2])
 
     x = x.assign(pct=np.where(x["sign"] == "plus", x["pct"], -x["pct"]))
+
+    z = (
+        X[X.columns[X.columns.str.contains("current_price_")]]
+        .apply(lambda x: x.unique())
+        .T.round(2)
+    )
+    z = z.rename(columns={0: "projected_price"}).reset_index(drop=True)
+    x = pd.concat([x, z], axis=1)
 
     return x, current_price
