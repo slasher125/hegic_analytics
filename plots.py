@@ -105,7 +105,7 @@ def plot_pnl(agg: pd.DataFrame, balances: pd.DataFrame, symbol: str):
 
     agg = agg.rename(columns={"type": "Option Type"})
     agg["Click to select"] = agg["Option Type"]
-    agg = agg.round(2)
+    agg = agg.round(3)
 
     pl_pct = round(
         (
@@ -121,7 +121,7 @@ def plot_pnl(agg: pd.DataFrame, balances: pd.DataFrame, symbol: str):
         x="group",
         y="profit",
         color="Click to select",
-        title=f"POOL P&L for selected range: {pl_pct}%",
+        title=f"Pool P&L for selected range: {pl_pct}%",
         labels={
             "profit": f"Profit in {symbol}",
             "group": "Group",
@@ -159,13 +159,16 @@ def plot_pnl(agg: pd.DataFrame, balances: pd.DataFrame, symbol: str):
 def plot_pool_balance(balances: pd.DataFrame, symbol: str):
 
     agg = balances.loc[symbol].to_frame().T[["availableBalance", "totalBalance"]]
-    util_rate = round(balances.loc[symbol]["util_ratio"] * 100, 2)
+    util_rate = round(balances.loc[symbol]["util_ratio"] * 100, 3)
     agg = agg.round(2)
     fig = px.bar(
         agg,
         barmode="overlay",
         color_discrete_sequence=["#45fff4", "#45fff4"],
         height=400,
+        labels={
+            "index": "Symbol",
+        },
     )
 
     fig.update_layout(
@@ -219,6 +222,58 @@ def plot_put_call_ratio(df: pd.DataFrame, symbol: str):
         showlegend=False,
         template="plotly_dark",
         title_x=0.5,
+    )
+
+    return fig
+
+
+def plot_pnl_pct_change(df_pct_change: pd.DataFrame, current_price: float):
+
+    df_pct_change = df_pct_change.round(3)
+
+    fig = px.area(
+        df_pct_change,
+        x="pct",
+        y="pnl",
+        title="Projected Pool P&L (in %) based on spot price changes",
+        template="plotly_dark",
+        color_discrete_sequence=["#45fff4"],
+        hover_data={
+            "projected_price": True,
+        },
+        labels={
+            "pct": "Percentage change",
+            "pnl": "Projected P&L",
+            "projected_price": "Spot Price",
+        },
+    )
+    fig.update_traces(mode="markers+lines")
+    fig.update_xaxes(showspikes=True)
+    fig.update_yaxes(showspikes=True, title_standoff=0)
+
+    fig.update_layout(
+        {
+            "plot_bgcolor": "rgba(0, 0, 0, 0)",
+            "paper_bgcolor": "rgba(0, 0, 0, 0)",
+        },  # this removes the native plotly background
+        font_family="Exo 2",
+        font_color="#defefe",
+        font_size=13,
+        yaxis_title="P&L in %",
+        xaxis_title="Percentage change of spot price",
+        xaxis_tickformat="%",
+    )
+
+    fig.add_vline(
+        x=0,
+        line_color="#ffd24c",
+        annotation=dict(
+            font_size=13,
+            font_family="Exo 2",
+            text=f"Current Price: {current_price}",
+            font_color="#ffd24c",
+        ),
+        annotation_position="bottom left",
     )
 
     return fig
