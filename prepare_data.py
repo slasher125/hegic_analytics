@@ -71,6 +71,11 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
         df["strike"] - (df["totalFeeUSD"] / df["amount"]),
     )
 
+    # there are some weird options (probably test cases) with very low/high strike prices
+    # e.g. 1usd strike for 10 wbtc put option (ID == WBTC-9). there breakeven price will be
+    # negative based on the above calculation so I set the min value to 0
+    df["breakeven"] = np.where(df["breakeven"] < 0, 0, df["breakeven"])
+
     # get latest prices
     current_price_wbtc = cg.get_price(ids="bitcoin", vs_currencies=currency)["bitcoin"][
         currency
@@ -123,14 +128,79 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
     # else ITM
     df["group"] = np.where(df["profit"] == -df["premium"], "OTM", "ITM")
 
-    # there are some weird options (probably test cases) with very low/high strike prices
-    # e.g. 1usd strike for 10 wbtc put option (ID == WBTC-9). there breakeven price will be
-    # negative based on the above calculation so I set the min value to 0
-    df["breakeven"] = np.where(df["breakeven"] < 0, 0, df["breakeven"])
+    ################################### this section is for calculating offsets on the current price
+    # to get an overview of how the pools P&L ranges with changes pct-changes (+/- 0-20 pct) in the spot price
+    # the below values will be bonkers for no longer active options, so set them to Nan later on
+    # we only need this for active stuff
+    for i in np.arange(0, 0.21, 0.01):
+        i = round(i, 2)
 
-    # round for plots
-    col_round = ["strike", "breakeven", "totalFee", "premium", "profit"]
-    df[col_round] = df[col_round].round(2)
+        # if price increases (this will be good for the calls and bad for the puts)
+        df[f"current_price_plus_{i}pct"] = df["current_price"] + df["current_price"] * i
+        # if price decreases (will be bad for calls and good for puts)
+        df[f"current_price_minus_{i}pct"] = (
+            df["current_price"] - df["current_price"] * i
+        )
+
+        # OTM
+        df[f"projected_profit_plus_{i}pct"] = np.where(
+            (df["type"] == "CALL") & (df[f"current_price_plus_{i}pct"] < df["strike"]),
+            -df["premium"],
+            np.nan,
+        )
+
+        df[f"projected_profit_plus_{i}pct"] = np.where(
+            (df["type"] == "PUT") & (df[f"current_price_plus_{i}pct"] > df["strike"]),
+            -df["premium"],
+            df[f"projected_profit_plus_{i}pct"],
+        )
+
+        df[f"projected_profit_minus_{i}pct"] = np.where(
+            (df["type"] == "CALL") & (df[f"current_price_minus_{i}pct"] < df["strike"]),
+            -df["premium"],
+            np.nan,
+        )
+
+        df[f"projected_profit_minus_{i}pct"] = np.where(
+            (df["type"] == "PUT") & (df[f"current_price_minus_{i}pct"] > df["strike"]),
+            -df["premium"],
+            df[f"projected_profit_minus_{i}pct"],
+        )
+
+        # II) ITM
+        df[f"projected_profit_plus_{i}pct"] = np.where(
+            (df["type"] == "CALL") & (df[f"current_price_plus_{i}pct"] >= df["strike"]),
+            ((df[f"current_price_plus_{i}pct"] - df["breakeven"]) * df["amount"])
+            / df[f"current_price_plus_{i}pct"],
+            df[f"projected_profit_plus_{i}pct"],
+        )
+
+        df[f"projected_profit_plus_{i}pct"] = np.where(
+            (df["type"] == "PUT") & (df[f"current_price_plus_{i}pct"] <= df["strike"]),
+            ((df["breakeven"] - df[f"current_price_plus_{i}pct"]) * df["amount"])
+            / df[f"current_price_plus_{i}pct"],
+            df[f"projected_profit_plus_{i}pct"],
+        )
+
+        df[f"projected_profit_minus_{i}pct"] = np.where(
+            (df["type"] == "CALL")
+            & (df[f"current_price_minus_{i}pct"] >= df["strike"]),
+            ((df[f"current_price_minus_{i}pct"] - df["breakeven"]) * df["amount"])
+            / df[f"current_price_minus_{i}pct"],
+            df[f"projected_profit_minus_{i}pct"],
+        )
+
+        df[f"projected_profit_minus_{i}pct"] = np.where(
+            (df["type"] == "PUT") & (df[f"current_price_minus_{i}pct"] <= df["strike"]),
+            ((df["breakeven"] - df[f"current_price_minus_{i}pct"]) * df["amount"])
+            / df[f"current_price_minus_{i}pct"],
+            df[f"projected_profit_minus_{i}pct"],
+        )
+
+    # set the values to Nan if status no ACTIVE
+    cols = df.columns[df.columns.str.contains("projected_profit")]
+    for i in cols:
+        df[i] = np.where(df["status"] != "ACTIVE", np.nan, df[i])
 
     return df
 
@@ -283,3 +353,59 @@ def get_pool_balances() -> pd.DataFrame:
     )
 
     return balances
+
+
+def get_pnl_pct_changes(
+    df: pd.DataFrame,
+    balances: pd.DataFrame,
+    relayoutData: dict,
+    symbol: str,
+    period: str,
+    amounts: typing.List[int],
+) -> pd.DataFrame:
+    """
+    code for aggregating data to plot P&L for different pct changes in spot price
+    """
+
+    X = df.copy()
+
+    # scale the decile amounts to proper deciles e.g. from 5 -> 0.5
+    # so that it can be used with the quantile func
+    amounts = [i / 10 for i in amounts]
+
+    X = X[X["symbol"] == symbol]
+    current_price = X["current_price"].unique()[0]
+
+    X = X[X["period_days"].isin(period)]
+    lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
+    X = X[X["amount"].between(lb, ub)]
+
+    # this block is for the interactive charting capability
+    try:
+        expiration_right = relayoutData["xaxis.range[0]"]
+        expiration_left = relayoutData["xaxis.range[1]"]
+        strike_top = relayoutData["yaxis.range[0]"]
+        strike_btm = relayoutData["yaxis.range[1]"]
+        X = X[X["expiration"].between(expiration_right, expiration_left)]
+        X = X[X["strike"].between(strike_top, strike_btm)]
+    except:
+        pass
+
+    # get the p&l's
+    cols = X.columns[X.columns.str.contains("projected_profit")]
+    x = X[cols].sum(axis=0)
+
+    # need to revert the sign to get the pnl for pool !
+    x = -x
+
+    # next need the current balance
+    x = (x / balances.loc[symbol]["totalBalance"]) * 100
+    x = x.to_frame("pnl").reset_index()
+    x["pct"] = (
+        x["index"].str.split("_").apply(lambda x: x[-1]).str.strip("pct").astype(float)
+    )
+    x["sign"] = x["index"].str.split("_").apply(lambda x: x[-2])
+
+    x = x.assign(pct=np.where(x["sign"] == "plus", x["pct"], -x["pct"]))
+
+    return x, current_price

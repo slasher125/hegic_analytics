@@ -192,6 +192,14 @@ def make_layout():
                                 )
                             ),
                             dbc.Row(
+                                dbc.Col(
+                                    dcc.Graph(
+                                        id="chart2d_pnl_pct_change",
+                                        config={"displayModeBar": False},
+                                    )
+                                )
+                            ),
+                            dbc.Row(
                                 [
                                     dbc.Col(
                                         dcc.Graph(
@@ -263,11 +271,13 @@ def chart2d_bubble(
         X, symbol, period, status, amounts
     )
 
+    print(id_)
     if id_ is not None and len(id_) > 0:
         if len(id_) >= 40:
             X = X[X["Account"].str.lower() == id_.lower()]
         else:
             X = X[X["Option ID"] == id_]
+    print(X)
 
     fig = plots.plot_bubble(
         X=X,
@@ -348,6 +358,39 @@ def chart2d_putcall(
     global df
 
     fig = plots.plot_put_call_ratio(df, symbol)
+
+    return fig
+
+
+@app.callback(
+    Output("chart2d_pnl_pct_change", "figure"),
+    [
+        Input("chart2d_bubble", "relayoutData"),
+        Input("symbol", "value"),
+        Input("period", "value"),
+        Input("amounts", "value"),
+        Input("invisible-div-callback-trigger", "children"),
+    ],
+)
+def chart2d_pnl_pct_change(
+    relayoutData: dict,
+    symbol: str,
+    period: str,
+    amounts: typing.List[int],
+    _,
+):
+
+    global df, balances
+
+    X, current_price = prepare_data.get_pnl_pct_changes(
+        df,
+        balances,
+        relayoutData,
+        symbol,
+        period,
+        amounts,
+    )
+    fig = plots.plot_pnl_pct_change(X, current_price)
 
     return fig
 

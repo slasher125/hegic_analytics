@@ -222,3 +222,51 @@ def plot_put_call_ratio(df: pd.DataFrame, symbol: str):
     )
 
     return fig
+
+
+def plot_pnl_pct_change(df_pct_change: pd.DataFrame, current_price: float):
+
+    df_pct_change = df_pct_change.round(3)
+
+    fig = px.area(
+        df_pct_change,
+        x="pct",
+        y="pnl",
+        title="Projected Pool P&L (in %) for selected range based on spot price changes",
+        template="plotly_dark",
+        color_discrete_sequence=["#45fff4"],
+        labels={
+            "pct": "Percentage change",
+            "pnl": "Projected P&L",
+        },
+    )
+    fig.update_traces(mode="markers+lines")
+    fig.update_xaxes(showspikes=True)
+    fig.update_yaxes(showspikes=True, title_standoff=0)
+
+    fig.update_layout(
+        {
+            "plot_bgcolor": "rgba(0, 0, 0, 0)",
+            "paper_bgcolor": "rgba(0, 0, 0, 0)",
+        },  # this removes the native plotly background
+        font_family="Exo 2",
+        font_color="#defefe",
+        font_size=13,
+        yaxis_title="P&L in %",
+        xaxis_title="Percentage change of spot price",
+        xaxis_tickformat="%",
+    )
+
+    fig.add_vline(
+        x=0,
+        line_color="#ffd24c",
+        annotation=dict(
+            font_size=13,
+            font_family="Exo 2",
+            text=f"Current Price: {current_price}",
+            font_color="#ffd24c",
+        ),
+        annotation_position="bottom left",
+    )
+
+    return fig
