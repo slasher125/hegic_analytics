@@ -121,7 +121,7 @@ def plot_pnl(agg: pd.DataFrame, balances: pd.DataFrame, symbol: str):
         x="group",
         y="profit",
         color="Click to select",
-        title=f"POOL P&L for selected range: {pl_pct}%",
+        title=f"Pool P&L for selected range: {pl_pct}%",
         labels={
             "profit": f"Profit in {symbol}",
             "group": "Group",
