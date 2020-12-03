@@ -173,8 +173,7 @@ def make_layout():
                                 children=[
                                     dcc.Markdown(
                                         """
-                                    > *If you'd like to support the dev with some coffee* 0xeb3020BEf4A33DaE09E62DDD4308A99FF4312650 (eth)
-                                    """
+                                    > If you'd like to [*support the dev*](https://etherscan.io/address/0xeb3020BEf4A33DaE09E62DDD4308A99FF4312650) with some coffee"""
                                     ),
                                 ],
                             ),
