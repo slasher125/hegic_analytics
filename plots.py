@@ -24,9 +24,10 @@ def plot_bubble(
     option_size = X["Option Size"].max()
     nb_put_call = X["Option Type"].value_counts()
     nb_unique_acc = X["Account"].nunique()
-    volume = X["Option Size"].sum()
+    oi = X["Option Size"].sum()
+    oi_usd = oi * current_price
 
-    title = f"""Puts: {nb_put_call['PUT'] if 'PUT' in nb_put_call else 0} Calls: {nb_put_call['CALL'] if 'CALL' in nb_put_call else 0} | Volume: {volume:.2f} {symbol} | Max Option-Size: {option_size} {symbol} | Unique Accounts: {nb_unique_acc} | Current IV: {current_iv}"""
+    title = f"""Open Interest: {oi:.2f} {symbol} - $ {oi_usd / 1e6:.2f} M | Current IV: {current_iv} | Max Option-Size: {option_size} {symbol} | Unique Accounts: {nb_unique_acc}"""
 
     fig = px.scatter(
         X,
@@ -275,5 +276,52 @@ def plot_pnl_pct_change(df_pct_change: pd.DataFrame, current_price: float):
         ),
         annotation_position="bottom left",
     )
+
+    return fig
+
+
+def plot_open_interest(data: pd.DataFrame, symbol: str):
+
+    data = data.rename(
+        columns={"amount": f"Amount in {symbol}", "amount_usd": "Amount in USD"}
+    )
+
+    data = data.round(3)
+
+    fig = px.area(
+        data,
+        x="date",
+        y=[f"Amount in {symbol}", "Amount in USD"],
+        color_discrete_sequence=["#ffd24c", "#45fff4"],
+        hover_data={
+            "date": False,
+            "variable": False,
+        },
+        labels={
+            "value": "Amount",
+        },
+        template="plotly_dark",
+        title=f"Open Interest in {symbol} and $",
+    )
+    fig.update_layout(
+        {
+            "plot_bgcolor": "rgba(0, 0, 0, 0)",
+            "paper_bgcolor": "rgba(0, 0, 0, 0)",
+        },  # this removes the native plotly background
+        font_family="Exo 2",
+        font_color="#defefe",
+        font_size=13,
+        yaxis_title="Amount",
+        xaxis_title="Day",
+        hovermode="x",
+        legend={  # adjust the location of the legend
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+        },
+    )
+    fig.update_yaxes(title_standoff=0)
 
     return fig

@@ -72,7 +72,7 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # there are some weird options (probably test cases) with very low/high strike prices
-    # e.g. 1usd strike for 10 wbtc put option (ID == WBTC-9). there breakeven price will be
+    # e.g. 1usd strike for 10 df_ put option (ID == WBTC-9). there breakeven price will be
     # negative based on the above calculation so I set the min value to 0
     df["breakeven"] = np.where(df["breakeven"] < 0, 0, df["breakeven"])
 
@@ -422,3 +422,56 @@ def prepare_pnl_pct_changes(
     x = pd.concat([x, z], axis=1)
 
     return x, current_price
+
+
+def prepare_leaderboard(
+    df: pd.DataFrame, symbol: str
+) -> typing.Tuple[pd.DataFrame, typing.List[str]]:
+
+    X = df.copy()
+    X = X[X["status"] == "ACTIVE"]
+    X = X[X["symbol"] == symbol]
+    X = X.sort_values(["amount", "profit"], ascending=False).reset_index(drop=True)
+    X["id"] = X["id"].str.split("-").apply(lambda x: x[1]).astype(int)
+    X = X[["amount", "profit", "id", "account"]]
+
+    X = X.round(2)
+    X = X.rename(
+        columns={
+            "amount": "Option Size",
+            "profit": f"Profit in {symbol}",
+            "id": "Option ID",
+            "account": "Account",
+        }
+    )
+
+    columns = [{"name": i, "id": i} for i in X.columns]
+
+    return X, columns
+
+
+def prepare_open_interest(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+
+    df_ = df[df["symbol"] == symbol]
+    df_ = df_.assign(amount_usd=df["amount"] * df["price"])
+
+    days = pd.date_range(
+        df_["timestamp"].dt.normalize().min() + pd.offsets.Day(1),
+        df_["timestamp"].dt.normalize().max(),
+    )
+
+    data = {}
+    for d in days:
+        # first we keep only samples up to that day
+        X = df_[df_["timestamp"] <= d]
+        # remove everything which is already expired
+        X = X[X["expiration"] >= d]
+        # remove exercised
+        X = X[(X["exercise_timestamp"].isna()) | (X["exercise_timestamp"] > d)]
+        # calculate sum
+        data[d] = X[["amount", "amount_usd"]].sum()
+
+    data = pd.DataFrame(data).T
+    data = data.reset_index().rename(columns={"index": "date"})
+
+    return data
