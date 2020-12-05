@@ -222,6 +222,14 @@ def make_layout():
                                     ),
                                 ]
                             ),
+                            dbc.Row(
+                                dbc.Col(
+                                    dcc.Graph(
+                                        id="chart2d_open_interest",
+                                        config={"displayModeBar": False},
+                                    )
+                                )
+                            ),
                         ],
                     ),
                 ],
@@ -390,6 +398,27 @@ def chart2d_pnl_pct_change(
         amounts,
     )
     fig = plots.plot_pnl_pct_change(X, current_price)
+
+    return fig
+
+
+@app.callback(
+    Output("chart2d_open_interest", "figure"),
+    [
+        Input("symbol", "value"),
+        Input("invisible-div-callback-trigger", "children"),
+    ],
+)
+def chart2d_open_interest(
+    symbol: str,
+    _,
+):
+
+    global df
+
+    X = prepare_data.prepare_open_interest(df, symbol)
+
+    fig = plots.plot_open_interest(X, symbol)
 
     return fig
 
