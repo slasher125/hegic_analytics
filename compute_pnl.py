@@ -100,14 +100,21 @@ def get_new_data():
 
 
 def get_new_data_every(period=300):
-    """Updates the global variable `df` and the `underlying_prices` dict every 300 seconds"""
+    """
+    Updates the global variables
+        - `df`
+        - `underlying_prices`
+        - `writetoken_totbal`
+    every 300 seconds
+    """
+
     while True:
         get_new_data()
         print("data updated")
         time.sleep(period)
 
 
-def mibian_bs(row) -> typing.Tuple[float, float, float]:
+def mibian_bs(row) -> pd.Series:
 
     formula = mibian.BS(
         [
