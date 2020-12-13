@@ -123,6 +123,14 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.drop(columns=["projected_profit"])
 
+    # NOTE(!)have to think about this, but I think overall its better the way it is not using this!
+    # in some isolated cases (usually with large options) small differences in the calculated
+    # break even price and the actual break even might be large enough to lead to some illogical
+    # values for the projected profit.
+    # I apply a filter on top, to make sure we don't see anything weird.
+    # A profit can never be smaller than -premium (no matter what scenario)
+    df["profit"] = np.where(df["profit"] < -df["premium"], -df["premium"], df["profit"])
+
     # OTM is if the profit is simply the same as the negative premium
     # e.g. premium was 10eth -> if the profit equals -10 then the option is OTM
     # else ITM
