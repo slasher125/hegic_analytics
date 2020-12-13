@@ -187,8 +187,10 @@ def make_layout():
                                     dcc.Graph(
                                         id="chart2d_bubble",
                                         config={"displayModeBar": False},
-                                    )
-                                )
+                                    ),
+                                    xs=12,
+                                    xl=12,  # xs is for phones to use the full width of the device, need xl in here as well to make sure the layout for large screens is being kept as defined in the css
+                                ),
                             ),
                             dbc.Row(
                                 [
@@ -196,13 +198,17 @@ def make_layout():
                                         dcc.Graph(
                                             id="chart2d_pnl_pct_change",
                                             config={"displayModeBar": False},
-                                        )
+                                        ),
+                                        xs=12,
+                                        xl=6,
                                     ),
                                     dbc.Col(
                                         dcc.Graph(
                                             id="chart2d_pnl",
                                             config={"displayModeBar": False},
-                                        )
+                                        ),
+                                        xs=12,
+                                        xl=6,
                                     ),
                                 ]
                             ),
@@ -212,13 +218,17 @@ def make_layout():
                                         dcc.Graph(
                                             id="chart2d_balance",
                                             config={"displayModeBar": False},
-                                        )
+                                        ),
+                                        xs=12,
+                                        xl=6,
                                     ),
                                     dbc.Col(
                                         dcc.Graph(
                                             id="chart2d_putcall",
                                             config={"displayModeBar": False},
-                                        )
+                                        ),
+                                        xs=12,
+                                        xl=6,
                                     ),
                                 ]
                             ),
@@ -239,7 +249,16 @@ def make_layout():
 
 
 # Initialise the app
-app = dash.Dash(__name__)
+# meta tags will only be applied to XS devices (mobile phones)
+app = dash.Dash(
+    __name__,
+    meta_tags=[
+        {
+            "name": "viewport",
+            "content": "width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0",
+        }
+    ],
+)
 
 # for gunicorn
 server = app.server
