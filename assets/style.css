@@ -467,7 +467,7 @@ Taken from https://codepen.io/chriddyp/pen/bWLwgP.css
   .div-for-charts{
     display: flex;
     flex-direction: column;
-    height: 350vh;
+    height: 500vh;
     width: 100%;
   }
   #histogram {
