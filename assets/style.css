@@ -467,7 +467,7 @@ Taken from https://codepen.io/chriddyp/pen/bWLwgP.css
   .div-for-charts{
     display: flex;
     flex-direction: column;
-    height: 300vh;
+    height: 350vh;
     width: 100%;
   }
   #histogram {
@@ -636,29 +636,6 @@ Taken from https://codepen.io/chriddyp/pen/bWLwgP.css
     }
   }
   
-  /* width */
-  ::-webkit-scrollbar {
-    width: 10px !important;
-    display: block !important;
-  }
-  
-  /* Track */
-  ::-webkit-scrollbar-track {
-    background: #45fff4 !important;
-    border-radius: 10px !important;
-    display: block !important;
-  }
-  
-  /* Handle */
-  ::-webkit-scrollbar-thumb {
-    background: transparent;
-  }
-  
-  /* Handle on hover */
-  ::-webkit-scrollbar-thumb:hover {
-    background: #45fff4 !important;
-  }
-  
   /* to adjust the colors of the drop down memus*/
   .dropdown_selector .Select-value {
   background-color:#19274d;
@@ -679,14 +656,6 @@ Taken from https://codepen.io/chriddyp/pen/bWLwgP.css
       background-color:#45fff4;
       color: #45fff4;
   }
-  /* .input_selector .VirtualizedSelectOption {
-      color: #45fff4;
-  } */
-  
-  /* .input_selector .VirtualizedSelectFocusedOption {
-      background-color: green;
-      color:green;
-    } */
 
 /* to prevent data table highlighting */
 .dash-spreadsheet-container .dash-spreadsheet-inner table {
