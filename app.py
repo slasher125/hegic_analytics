@@ -19,29 +19,45 @@ import plots
 def get_new_data():
     """Updates the global variable 'df' with new data"""
     global df, balances
-    df = api.get_data("options")
+    df = api.get_data("options_active")
 
     # the status from the subgraph data will only change if
     # unlock and unlockAll API is called. this is currently done manually!
     # to address this I check for it and set samples with active status
     # but expiration in the past (smaller than timestamp utc now) to EXPIRED
-    df = df.assign(
-        status=np.where(
-            (df["status"] == "ACTIVE")
-            & (df["expiration"] < pd.Timestamp.utcnow().tz_localize(None)),
-            "EXPIRED",
-            df["status"],
-        )
-    )
-
+    df = df[df["expiration"] >= pd.Timestamp.utcnow().tz_localize(None)]
     df = prepare_data.get_projected_profit(df)
     balances = prepare_data.get_pool_balances()
+
+
+def get_historical_oi():
+    df_full = pd.read_parquet("df_full.parquet")
+    df_oi_hist = prepare_data.prepare_historical_open_interest(df_full)
+
+    return df_oi_hist
+
+
+def update_expanding_oi():
+    global df_oi
+
+    today = pd.to_datetime("today").normalize()
+    df["amount_usd"] = df["amount"] * df["current_price"]
+    df["date"] = today
+    X = df.groupby(["date", "symbol"])[["amount", "amount_usd"]].sum().reset_index()
+
+    dict_oi_expanding[today] = X
+    print(dict_oi_expanding)
+
+    df_oi_expanding = pd.concat(dict_oi_expanding).reset_index(drop=True)
+    df_oi = pd.concat([df_oi_hist, df_oi_expanding]).reset_index(drop=True)
+    print(df_oi.tail())
 
 
 def get_new_data_every(period=300):
     """Update the data every 300 seconds"""
     while True:
         get_new_data()
+        update_expanding_oi()
         print("data updated")
         time.sleep(period)
 
@@ -61,7 +77,7 @@ def make_layout():
                             html.H1("HEGIC OPTIONS ANALYTICS TOOL"),
                             dcc.Markdown(
                                 """
-                                Interactive charts for ETH/WBTC option amount (bubble size) updated every 5min from [*subgraph*](https://thegraph.com/explorer/subgraph/ppunky/hegic-v888).
+                                Interactive charts displaying active ETH/WBTC option amount (bubble size) updated every 5min from [*subgraph*](https://thegraph.com/explorer/subgraph/ppunky/hegic-v888).
                                 """
                             ),
                             html.Div(html.H2("SYMBOL")),
@@ -76,26 +92,6 @@ def make_layout():
                                         ],
                                         value="WBTC",  # default
                                         labelStyle={"display": "inline-block"},
-                                        className="dropdown_selector",
-                                    ),
-                                ],
-                            ),
-                            html.Div(html.H2("STATUS")),
-                            html.Div(
-                                className="div-for-dropdown",
-                                children=[
-                                    dcc.Dropdown(
-                                        id="status",
-                                        options=[
-                                            {"label": "ACTIVE", "value": "ACTIVE"},
-                                            {"label": "EXPIRED", "value": "EXPIRED"},
-                                            {
-                                                "label": "EXERCISED",
-                                                "value": "EXERCISED",
-                                            },
-                                        ],
-                                        value=["ACTIVE"],  # default
-                                        multi=True,
                                         className="dropdown_selector",
                                     ),
                                 ],
@@ -131,7 +127,7 @@ def make_layout():
                                         marks={
                                             int(i): str(i) for i in np.arange(0, 11, 1)
                                         },
-                                        value=[0, 10],
+                                        value=[1, 10],
                                         allowCross=False,
                                         className="dropdown_selector",
                                     ),
@@ -157,7 +153,7 @@ def make_layout():
                             ),
                             html.Div(
                                 html.P(
-                                    "Remove the ID from the search box to get back to the overview of options."
+                                    "Clear the search box to return to options overview."
                                 )
                             ),
                             html.Div(html.H2("GENERAL INFO")),
@@ -266,6 +262,13 @@ server = app.server
 # get initial data
 get_new_data()
 
+# calculate historical OI (we do this once, and then append the current day whos values
+# get updated every 5min)
+df_oi_hist = get_historical_oi()
+dict_oi_expanding = {}
+update_expanding_oi()
+
+
 # # we need to set layout to be a function so that for each new page load
 # # the layout is re-created with the current data, otherwise they will see
 # # data that was generated when the Dash app was first initialised
@@ -277,7 +280,6 @@ app.layout = make_layout
     [
         Input("symbol", "value"),
         Input("period", "value"),
-        Input("status", "value"),
         Input("amounts", "value"),
         Input("id", "value"),
         Input("invisible-div-callback-trigger", "children"),
@@ -286,7 +288,6 @@ app.layout = make_layout
 def chart2d_bubble(
     symbol: str,
     period: str,
-    status: str,
     amounts: typing.List[int],
     id_: str,
     _,
@@ -296,7 +297,7 @@ def chart2d_bubble(
     X = df.copy()
 
     X, bubble_size, current_price, current_iv = prepare_data.prepare_bubble(
-        X, symbol, period, status, amounts
+        X, symbol, period, amounts
     )
 
     if id_ is not None and len(id_) > 0:
@@ -322,7 +323,6 @@ def chart2d_bubble(
         Input("chart2d_bubble", "relayoutData"),
         Input("symbol", "value"),
         Input("period", "value"),
-        Input("status", "value"),
         Input("amounts", "value"),
         Input("id", "value"),
         Input("invisible-div-callback-trigger", "children"),
@@ -332,7 +332,6 @@ def chart2d_pnl(
     relayoutData: dict,
     symbol: str,
     period: str,
-    status: typing.List[str],
     amounts: typing.List[int],
     id_: str,
     _,
@@ -341,9 +340,7 @@ def chart2d_pnl(
     global df, balances
     X = df.copy()
 
-    agg = prepare_data.prepare_pnl(
-        X, symbol, period, status, amounts, relayoutData, id_
-    )
+    agg = prepare_data.prepare_pnl(X, symbol, period, amounts, relayoutData, id_)
 
     fig = plots.plot_pnl(agg=agg, balances=balances, symbol=symbol)
 
@@ -433,11 +430,13 @@ def chart2d_open_interest(
     _,
 ):
 
-    global df
+    """
+    given that this is static its better to calcuate this with every n-th update once
+    instead of on every user interaction
+    """
+    global df_oi
 
-    X = prepare_data.prepare_open_interest(df, symbol)
-
-    fig = plots.plot_open_interest(X, symbol)
+    fig = plots.plot_open_interest(df_oi, symbol)
 
     return fig
 

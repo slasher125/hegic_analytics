@@ -117,9 +117,7 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
         df["projected_profit"],
     )
 
-    df["profit"] = np.where(
-        df["status"] == "ACTIVE", df["projected_profit"], df["profit"]
-    )
+    df["profit"] = df["projected_profit"]
 
     df = df.drop(columns=["projected_profit"])
 
@@ -205,11 +203,6 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
             df[f"projected_profit_minus_{i}pct"],
         )
 
-    # set the values to Nan if status no ACTIVE
-    cols = df.columns[df.columns.str.contains("projected_profit")]
-    for i in cols:
-        df[i] = np.where(df["status"] != "ACTIVE", np.nan, df[i])
-
     return df
 
 
@@ -217,7 +210,6 @@ def prepare_bubble(
     X: pd.DataFrame,
     symbol: str,
     period: typing.List[str],
-    status: typing.List[str],
     amounts: typing.List[float],
 ) -> typing.Tuple[pd.DataFrame, int, float, int]:
     """
@@ -240,7 +232,6 @@ def prepare_bubble(
     # price will stay the same for the below sections! (but must be after the symbol selector)
     current_iv = int(X.loc[X["timestamp_unix"].idxmax()]["impliedVolatility"])
     X = X[X["period_days"].isin(period)]
-    X = X[X["status"].isin(status)]
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
     X = X[X["amount"].between(lb, ub)]
 
@@ -257,7 +248,6 @@ def prepare_bubble(
         "expiration": "Expires On",
         "period_days": "Period of Holding",
         "settlementFee": "Settlement Fee",
-        "status": "Status",
         "strike": "Strike Price",
         "breakeven": "Break-even price",
         "symbol": "Symbol",
@@ -288,7 +278,6 @@ def prepare_pnl(
     X: pd.DataFrame,
     symbol: str,
     period: str,
-    status: typing.List[str],
     amounts: typing.List[int],
     relayoutData: dict,
     id_: str,
@@ -303,7 +292,6 @@ def prepare_pnl(
 
     X = X[X["symbol"] == symbol]
     X = X[X["period_days"].isin(period)]
-    X = X[X["status"].isin(status)]
     lb, ub = X["amount"].quantile(amounts[0]), X["amount"].quantile(amounts[1])
     X = X[X["amount"].between(lb, ub)]
 
@@ -437,7 +425,6 @@ def prepare_leaderboard(
 ) -> typing.Tuple[pd.DataFrame, typing.List[str]]:
 
     X = df.copy()
-    X = X[X["status"] == "ACTIVE"]
     X = X[X["symbol"] == symbol]
     X = X.sort_values(["amount", "profit"], ascending=False).reset_index(drop=True)
     X["id"] = X["id"].str.split("-").apply(lambda x: x[1]).astype(int)
@@ -458,28 +445,30 @@ def prepare_leaderboard(
     return X, columns
 
 
-def prepare_open_interest(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+def prepare_historical_open_interest(df_full: pd.DataFrame) -> pd.DataFrame:
 
-    df_ = df[df["symbol"] == symbol]
-    df_ = df_.assign(amount_usd=df["amount"] * df["price"])
+    df_full = df_full.assign(amount_usd=df_full["amount"] * df_full["price"])
 
     days = pd.date_range(
-        df_["timestamp"].dt.normalize().min() + pd.offsets.Day(1),
-        df_["timestamp"].dt.normalize().max(),
+        df_full["timestamp"].dt.normalize().min() + pd.offsets.Day(1),
+        df_full["timestamp"].dt.normalize().max(),
     )
 
     data = {}
     for d in days:
         # first we keep only samples up to that day
-        X = df_[df_["timestamp"] <= d]
+        X = df_full[df_full["timestamp"] <= d]
         # remove everything which is already expired
         X = X[X["expiration"] >= d]
         # remove exercised
         X = X[(X["exercise_timestamp"].isna()) | (X["exercise_timestamp"] > d)]
         # calculate sum
-        data[d] = X[["amount", "amount_usd"]].sum()
+        data[d] = X.groupby("symbol")[["amount", "amount_usd"]].sum()
 
-    data = pd.DataFrame(data).T
-    data = data.reset_index().rename(columns={"index": "date"})
+    data = pd.concat(data)
+    data = data.reset_index().rename(columns={"level_0": "date"})
+
+    # exclude today (thats what we keep recalculating) (temporary only)
+    data = data[data["date"] < pd.to_datetime("today").normalize()]
 
     return data

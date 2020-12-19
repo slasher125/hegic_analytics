@@ -26,6 +26,8 @@ def loop_over_pages(content: str) -> List:
     page_size = 0
     page = 1
 
+    x = content.split("_")[0]
+
     while True:
         print("page:", page)
         q = queries[content]
@@ -39,7 +41,7 @@ def loop_over_pages(content: str) -> List:
                 print(e)
                 break
             try:
-                sample = response[content]
+                sample = response[x]
                 if len(sample) > 0:
                     data.append(pd.DataFrame(sample))
                 else:
@@ -65,7 +67,7 @@ def get_data(content: str) -> pd.DataFrame:
     # keep the unix timestamp
     df["timestamp_unix"] = df["timestamp"]
 
-    if content == "options":
+    if "options" in content:
         cols = [
             "amount",
             "lockedAmount",
@@ -112,6 +114,29 @@ def get_data(content: str) -> pd.DataFrame:
 
 
 queries = {
+    "options_active": """{
+        options(where: {status: "ACTIVE"}, first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
+        id
+        account
+        symbol
+        status
+        strike
+        amount
+        lockedAmount
+        timestamp
+        period
+        expiration
+        type
+        premium
+        settlementFee
+        totalFee
+        exercise_timestamp
+        exercise_tx
+        profit
+        impliedVolatility
+        block
+        }
+        }""",
     "options": """{
         options(first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
