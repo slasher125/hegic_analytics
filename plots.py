@@ -27,7 +27,7 @@ def plot_bubble(
     oi = X["Option Size"].sum()
     oi_usd = oi * current_price
 
-    title = f"""Open Interest: {oi:.2f} {symbol} - $ {oi_usd / 1e6:.2f} M | Current IV: {current_iv} | Max Option-Size: {option_size} {symbol} | Unique Accounts: {nb_unique_acc}"""
+    title = f"""OI: {oi:.2f} {symbol} - $ {oi_usd / 1e6:.2f} M | IV: {current_iv} | Max Option-Size: {option_size} {symbol} | Unique Accounts: {nb_unique_acc}"""
 
     fig = px.scatter(
         X,
@@ -196,7 +196,7 @@ def plot_pool_balance(balances: pd.DataFrame, symbol: str):
 
 def plot_put_call_ratio(df: pd.DataFrame, symbol: str):
 
-    X = df[(df["status"] == "ACTIVE") & (df["symbol"] == symbol)]
+    X = df[df["symbol"] == symbol]
     X = X.groupby("type")["amount"].sum().to_frame("Volume")
     X["pct"] = X["Volume"] / X["Volume"].sum()
     X = X.reset_index().rename(columns={"type": "Option Type"})
@@ -282,6 +282,8 @@ def plot_pnl_pct_change(df_pct_change: pd.DataFrame, current_price: float):
 
 def plot_open_interest(data: pd.DataFrame, symbol: str):
 
+    data = data[data["symbol"] == symbol]
+
     data = data.rename(
         columns={"amount": f"Amount in {symbol}", "amount_usd": "Amount in USD"}
     )
@@ -301,7 +303,7 @@ def plot_open_interest(data: pd.DataFrame, symbol: str):
             "value": "Amount",
         },
         template="plotly_dark",
-        title=f"Open Interest in {symbol} and $",
+        title=f"Open Interest",
     )
     fig.update_layout(
         {
