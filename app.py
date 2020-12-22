@@ -46,11 +46,9 @@ def update_expanding_oi():
     X = df.groupby(["date", "symbol"])[["amount", "amount_usd"]].sum().reset_index()
 
     dict_oi_expanding[today] = X
-    print(dict_oi_expanding)
 
     df_oi_expanding = pd.concat(dict_oi_expanding).reset_index(drop=True)
     df_oi = pd.concat([df_oi_hist, df_oi_expanding]).reset_index(drop=True)
-    print(df_oi.tail())
 
 
 def get_new_data_every(period=300):

@@ -50,7 +50,7 @@ def loop_over_pages(content: str) -> List:
                 print(e)
                 break
             # increase skip param
-            page_size += 100
+            page_size += 200
             page += 1
         except:
             break
@@ -115,7 +115,7 @@ def get_data(content: str) -> pd.DataFrame:
 
 queries = {
     "options_active": """{
-        options(where: {status: "ACTIVE"}, first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
+        options(where: {status: "ACTIVE"}, first: 200, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
         account
         symbol
@@ -138,7 +138,7 @@ queries = {
         }
         }""",
     "options": """{
-        options(first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
+        options(first: 200, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
         account
         symbol
@@ -161,7 +161,7 @@ queries = {
         }
         }""",
     "poolBalances": """{ 
-        poolBalances(first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
+        poolBalances(first: 200, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
         timestamp
         account
@@ -189,7 +189,7 @@ queries = {
         }
         }""",
     "bondingCurveEvents": """{ 
-        bondingCurveEvents(first: 100, skip: page_size, orderBy: timestamp, orderDirection: asc) {
+        bondingCurveEvents(first: 200, skip: page_size, orderBy: timestamp, orderDirection: asc) {
         id
         timestamp
         account
