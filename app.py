@@ -38,7 +38,7 @@ def get_historical_oi():
 
 
 def update_expanding_oi():
-    global df_oi
+    global df_oi, dict_oi_expanding
 
     today = pd.to_datetime("today").normalize()
     df["amount_usd"] = df["amount"] * df["current_price"]
