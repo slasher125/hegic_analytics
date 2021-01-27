@@ -135,10 +135,11 @@ def get_projected_profit(df: pd.DataFrame) -> pd.DataFrame:
     df["group"] = np.where(df["profit"] == -df["premium"], "OTM", "ITM")
 
     ################################### this section is for calculating offsets on the current price
-    # to get an overview of how the pools P&L ranges with changes pct-changes (+/- 0-20 pct) in the spot price
+    # to get an overview of how the pools P&L ranges with changes pct-changes (+/- 0-25 pct) in the spot price
     # the below values will be bonkers for no longer active options, so set them to Nan later on
     # we only need this for active stuff
-    for i in np.arange(0, 0.26, 0.01):
+    spread = 0.50
+    for i in np.arange(0, spread + 0.01, 0.01):
         i = round(i, 2)
 
         # if price increases (this will be good for the calls and bad for the puts)
