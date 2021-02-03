@@ -23,3 +23,7 @@ Out[2]:
 ### APP Usage
 after installing the project run `python app.py` and go to
 http://localhost:8050/
+
+
+### the app is also available here: 
+https://hegic-analytics.herokuapp.com/
